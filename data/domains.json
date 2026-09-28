@@ -1,0 +1,23 @@
+[
+  {
+    "id": 1,
+    "name": "example.ru",
+    "owner": "Иванов И.И.",
+    "organization": "ООО \"Ромашка\"",
+    "registration_end": "2026-12-31"
+  },
+  {
+    "id": 2,
+    "name": "shop.example.com",
+    "owner": "Петров П.П.",
+    "organization": "ИП Петров",
+    "registration_end": "2026-10-05"
+  },
+  {
+    "id": 3,
+    "name": "old-project.ru",
+    "owner": "Сидорова А.А.",
+    "organization": "ООО \"Ромашка\"",
+    "registration_end": "2026-01-15"
+  }
+]
