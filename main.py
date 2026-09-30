@@ -1,35 +1,41 @@
 """Точка запуска приложения «Система учета доменных имен»."""
 
-from domains import add_domain, find_domain
-from registrations import (
-    cancel_domain,
+from typing import List
+
+from models import Domain, User
+from models.domains import (
+    add_domain,
     domain_statistics,
-    get_domain_status,
-    is_domain_active,
+    find_domain,
+    remove_domain,
     renew_domain,
-    sort_domains_by_expiration,
+    show_domains,
 )
-from storage import load_domains, save_domains
+from models.users import add_user, find_user_by_id, show_users
+from storage import load_domains, load_users, save_domains, save_users
 from utils import input_date, input_int, input_nonempty
 
-DATA_FILE = "data/domains.json"
+DOMAINS_FILE = "data/domains.json"
+USERS_FILE = "data/users.json"
 
 
-def show_domains(domains: dict[int, dict]) -> None:
-    """Вывести список доменов, отсортированный по сроку регистрации."""
-    if not domains:
-        print("Реестр пуст.")
+def create_new_domain(domains: List[Domain], users: List[User]) -> None:
+    """Пользовательский сценарий добавления домена с привязкой к владельцу."""
+    user_id = input_int("id владельца (пользователя): ")
+    owner = find_user_by_id(users, user_id)
+    if owner is None:
+        print("Пользователь с таким id не найден. Сначала добавьте его (пункт 4).")
         return
-    for item in sort_domains_by_expiration(domains):
-        status = get_domain_status(is_domain_active(item["registration_end"]))
-        print(
-            f"[{item['id']}] {item['name']} | владелец: {item['owner']} | "
-            f"организация: {item['organization']} | "
-            f"до {item['registration_end']} | {status}"
-        )
+
+    name = input_nonempty("Название домена: ")
+    organization = input_nonempty("Организация: ")
+    registration_end = input_date("Срок действия (ДД.ММ.ГГГГ): ")
+
+    domain = add_domain(domains, name, organization, registration_end, owner)
+    print(f"Домен добавлен, id = {domain.id}")
 
 
-def show_statistics(domains: dict[int, dict]) -> None:
+def show_statistics(domains: List[Domain]) -> None:
     """Вывести статистику по реестру доменов."""
     stats = domain_statistics(domains)
     print(f"Всего доменов: {stats['total']}")
@@ -39,17 +45,20 @@ def show_statistics(domains: dict[int, dict]) -> None:
 
 
 def main() -> None:
-    """Точка запуска: цикл меню и вызов функций проекта."""
-    domains = load_domains(DATA_FILE)
+    """Точка запуска: загрузка данных, цикл меню, сохранение изменений."""
+    users = load_users(USERS_FILE)
+    domains = load_domains(DOMAINS_FILE, users)
 
     menu = """
 === Система учета доменных имен ===
 1. Показать домены
 2. Найти домен
-3. Добавить домен
-4. Продлить домен
-5. Удалить домен
-6. Статистика
+3. Показать пользователей
+4. Добавить пользователя
+5. Добавить домен
+6. Продлить домен
+7. Удалить домен
+8. Статистика
 0. Выход
 """
 
@@ -61,32 +70,34 @@ def main() -> None:
             show_domains(domains)
         elif choice == "2":
             query = input_nonempty("Название или организация: ")
-            found = find_domain(domains, query)
-            show_domains(found)
+            show_domains(find_domain(domains, query))
         elif choice == "3":
-            name = input_nonempty("Название домена: ")
-            owner = input_nonempty("Владелец: ")
-            organization = input_nonempty("Организация: ")
-            registration_end = input_date("Срок действия (ДД.ММ.ГГГГ): ")
-            new_id = add_domain(domains, name, owner, organization, registration_end)
-            save_domains(DATA_FILE, domains)
-            print(f"Домен добавлен, id = {new_id}")
+            show_users(users)
         elif choice == "4":
+            name = input_nonempty("Имя пользователя: ")
+            email = input_nonempty("Email: ")
+            user = add_user(users, name, email)
+            save_users(USERS_FILE, users)
+            print(f"Пользователь добавлен, id = {user.id}")
+        elif choice == "5":
+            create_new_domain(domains, users)
+            save_domains(DOMAINS_FILE, domains)
+        elif choice == "6":
             domain_id = input_int("id домена: ")
             new_end_date = input_date("Новый срок действия (ДД.ММ.ГГГГ): ")
             if renew_domain(domains, domain_id, new_end_date):
-                save_domains(DATA_FILE, domains)
+                save_domains(DOMAINS_FILE, domains)
                 print("Срок регистрации обновлён.")
             else:
                 print("Домен с таким id не найден.")
-        elif choice == "5":
+        elif choice == "7":
             domain_id = input_int("id домена: ")
-            if cancel_domain(domains, domain_id):
-                save_domains(DATA_FILE, domains)
-                print("Домен удалён.")
+            if remove_domain(domains, domain_id):
+                save_domains(DOMAINS_FILE, domains)
+                print("Домен удалён из активного использования.")
             else:
                 print("Домен с таким id не найден.")
-        elif choice == "6":
+        elif choice == "8":
             show_statistics(domains)
         elif choice == "0":
             print("Завершение работы.")
