@@ -53,7 +53,7 @@ def domains(request):
     if rows:
         body = f"""
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover table-dark">
                 <thead>
                     <tr>
                         <th>Домен</th>

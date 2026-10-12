@@ -3,6 +3,36 @@
 from django.http import HttpResponse
 from django.utils.html import escape
 
+STYLES = """
+    <style>
+        body {
+            background-color: #631e29;
+            color: #ebdecd;
+        }
+        .nav {
+            --bs-nav-link-color: #1B1C1D;
+            --bs-nav-link-hover-color: #ebdecd;
+        }
+        .card {
+            --bs-card-bg: #304059;
+            --bs-card-color: #ebdecd;
+            --bs-card-border-color: #304059;
+        }
+        a {
+            color: #ebdecd;
+        }
+        a:hover {
+            color: #b04530;
+        }
+        .table-dark {
+            --bs-table-bg: #304059;
+            --bs-table-color: #ebdecd;
+        }
+        .text-danger {
+            color: #ebdecd !important;
+        }
+    </style>"""
+
 
 def page(title, content):
     """Собрать HTML-страницу: кодировка, заголовок, Bootstrap, навигация."""
@@ -13,10 +43,10 @@ def page(title, content):
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{escape(title)}</title>
-    <link rel="stylesheet" href="{bootstrap}">
+    <link rel="stylesheet" href="{bootstrap}">{STYLES}
 </head>
 <body>
-    <nav class="nav">
+    <nav class="nav" style="justify-content:center;">
         <a class="nav-link" href="/">Главная</a>
         <a class="nav-link" href="/domains/">Домены</a>
     </nav>
