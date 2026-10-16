@@ -3,6 +3,7 @@
 from datetime import date
 from typing import List, Optional
 
+from .organizations import Organization
 from .users import User
 
 
@@ -13,7 +14,7 @@ class Domain:
         self,
         domain_id: int,
         name: str,
-        organization: str,
+        organization: Organization,
         registration_end: date,
         owner: User,
     ) -> None:
@@ -45,7 +46,7 @@ class Domain:
         """Вернуть строковое представление домена."""
         status = "активен" if self.is_active() else "неактивен"
         return (
-            f"{self.name} | организация: {self.organization} | "
+            f"{self.name} | организация: {self.organization.name} | "
             f"владелец: {self.owner.name} | до {self.registration_end} | {status}"
         )
 
@@ -53,7 +54,7 @@ class Domain:
 def add_domain(
     domains: List[Domain],
     name: str,
-    organization: str,
+    organization: Organization,
     registration_end: date,
     owner: User,
 ) -> Domain:
@@ -70,7 +71,7 @@ def find_domain(domains: List[Domain], query: str) -> List[Domain]:
     return [
         domain
         for domain in domains
-        if query_lower in domain.name.lower() or query_lower in domain.organization.lower()
+        if query_lower in domain.name.lower() or query_lower in domain.organization.name.lower()
     ]
 
 
@@ -82,9 +83,9 @@ def find_domain_by_id(domains: List[Domain], domain_id: int) -> Optional[Domain]
     return None
 
 
-def filter_domains_by_organization(domains: List[Domain], organization: str) -> List[Domain]:
-    """Отобрать домены, закреплённые за указанной организацией."""
-    return [domain for domain in domains if domain.organization.lower() == organization.lower()]
+def filter_domains_by_organization(domains: List[Domain], organization_id: int) -> List[Domain]:
+    """Отобрать домены, закреплённые за организацией с указанным id."""
+    return [domain for domain in domains if domain.organization.id == organization_id]
 
 
 def sort_domains_by_expiration(domains: List[Domain]) -> List[Domain]:

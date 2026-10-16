@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "Хостинг Start",
+    "kind": "Хостинг",
+    "domain_id": 1
+  },
+  {
+    "id": 2,
+    "name": "SSL-сертификат",
+    "kind": "SSL",
+    "domain_id": 1
+  },
+  {
+    "id": 3,
+    "name": "Почта на домене",
+    "kind": "Почта",
+    "domain_id": 2
+  },
+  {
+    "id": 4,
+    "name": "DNS-хостинг",
+    "kind": "DNS",
+    "domain_id": 3
+  }
+]

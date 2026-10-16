@@ -7,11 +7,11 @@
 веб-интерфейсом на Django (ПР5).
 
 Приложение позволяет:
-* просматривать список доменов в браузере;
-* просматривать информацию о конкретном домене;
+* просматривать списки доменов, организаций, ресурсов и аренд в браузере;
+* просматривать информацию о конкретном домене, организации, ресурсе и аренде;
 * проверять статус домена (активен / истёк / удалён) на текущую дату;
-* добавлять пользователей и домены, продлевать и удалять домены
-  (консольная версия);
+* добавлять пользователей, организации, домены, ресурсы, оформлять и отменять
+  аренду, продлевать и удалять домены (консольная версия);
 * искать домены по названию и организации (консольная версия);
 * получать статистику по реестру (консольная версия);
 * хранить данные между запусками приложения.
@@ -36,6 +36,8 @@
 
 Пользователь может владеть несколькими доменами. Каждый домен закреплён за
 организацией, имеет владельца (пользователя) и срок действия регистрации.
+К домену привязываются ресурсы (хостинг, SSL, почта, DNS), а сам домен может
+сдаваться пользователям в аренду на определённый срок.
 Удалённый из активного использования домен не удаляется из истории – он
 помечается неактивным.
 
@@ -48,7 +50,7 @@
 Основные атрибуты:
 * `id` – уникальный идентификатор домена;
 * `name` – название домена;
-* `organization` – организация, за которой закреплён домен;
+* `organization` – объект `Organization`, организация, за которой закреплён домен;
 * `registration_end` – срок действия регистрации;
 * `owner` – объект `User`, владелец домена;
 * `is_removed` – признак исключения из активного использования.
@@ -72,6 +74,23 @@
 * `__str__()` – строковое представление пользователя;
 * `from_data()` – создание объекта `User` из набора данных.
 
+### Organization – организация
+
+Атрибуты: `id`, `name`. Методы: `__str__()`, `from_data()`.
+
+### Resource – ресурс домена
+
+Атрибуты: `id`, `name`, `kind` (тип: хостинг, SSL, почта, DNS), `domain` –
+объект `Domain`. Методы: `is_active()` (ресурс активен, пока активен домен),
+`__str__()`.
+
+### Rental – аренда домена
+
+Атрибуты: `id`, `user` – арендатор, `domain` – арендуемый домен, `start_date`
+и `end_date` – срок аренды, `is_cancelled` – признак отмены.
+Методы: `is_active()` (аренда действует на текущую дату), `cancel()` (отмена с
+сохранением истории), `__str__()`.
+
 ## Страницы веб-интерфейса
 
 * `/` – главная страница: описание приложения и навигация
@@ -79,10 +98,16 @@
 * `/domains/` – список доменов: объекты `Domain` из `data/domains.json`
   (view-функция `domains()`);
 * `/domains/<int:domain_id>/` – страница домена
-  (view-функция `domain_detail()`).
+  (view-функция `domain_detail()`);
+* `/organizations/` и `/organizations/<int:organization_id>/` – список и страница
+  организации с её доменами (`organizations()`, `organization_detail()`);
+* `/resources/` и `/resources/<int:resource_id>/` – список и страница ресурса
+  (`resources()`, `resource_detail()`);
+* `/rentals/` и `/rentals/<int:rental_id>/` – список и страница аренды
+  (`rentals()`, `rental_detail()`).
 
-Если домен с указанным идентификатором не найден, страница домена возвращает
-код статуса 404. Для любого адреса, которому не нашлось маршрута, работает
+Если объект с указанным идентификатором не найден, страница возвращает код
+статуса 404. Для любого адреса, которому не нашлось маршрута, работает
 собственная страница 404 (`handler404` → `page_not_found()`).
 
 ## Основные операции
@@ -90,7 +115,7 @@
 ### Используется в веб-интерфейсе (ПР5)
 
 * просмотр списка доменов;
-* просмотр информации о домене и его владельце;
+* просмотр информации о домене, его владельце, организации, ресурсах и аренде;
 * проверка статуса домена на текущую дату.
 
 ### Отложено до следующих работ
@@ -98,22 +123,26 @@
 Эти операции реализованы в ПР3 и работают в консольной версии. В веб-интерфейсе
 они появятся, когда будут добавлены формы и POST-запросы:
 
-* добавление домена и пользователя;
+* добавление домена, пользователя, организации, ресурса и аренды;
 * поиск домена и пользователя;
 * фильтрация доменов по организации;
 * сортировка доменов по сроку регистрации;
-* продление и удаление домена;
+* продление и удаление домена, отмена аренды;
 * статистика по реестру.
 
 ## Хранение данных
 
 Данные приложения хранятся в JSON-файлах:
 * `data/domains.json`;
-* `data/users.json`.
+* `data/users.json`;
+* `data/organizations.json`;
+* `data/resources.json`;
+* `data/rentals.json`.
 
 При загрузке данные из JSON преобразуются в объекты `Domain` и `User`, при
 сохранении объекты преобразуются в данные JSON. Для связи домена с владельцем
-в `domains.json` используется идентификатор `owner_id`.
+в `domains.json` используются идентификаторы `owner_id` и `organization_id`,
+в `resources.json` – `domain_id`, в `rentals.json` – `user_id` и `domain_id`.
 
 ## Структура проекта
 
@@ -156,18 +185,31 @@ domain_registry/
 │   ├── urls.py
 │   └── views.py
 │
+├── organizations/   (аналогичная структура)
+├── resources/       (аналогичная структура)
+├── rentals/         (аналогичная структура)
+│
 ├── models/
 │   ├── __init__.py
 │   ├── domains.py
+│   ├── organizations.py
+│   ├── resources.py
+│   ├── rentals.py
 │   └── users.py
 │
 ├── data/
 │   ├── domains.json
-│   └── users.json
+│   ├── users.json
+│   ├── organizations.json
+│   ├── resources.json
+│   └── rentals.json
 │
 └── tests/
     ├── test_domains.py
-    └── test_users.py
+    ├── test_users.py
+    ├── test_organizations.py
+    ├── test_resources.py
+    └── test_rentals.py
 ```
 
 ## Назначение модулей
@@ -187,8 +229,8 @@ domain_registry/
 ### `homepage/`
 
 Django-приложение, отвечающее за главную страницу:
-* `views.py` – функция `page()` (общий HTML-каркас), view-функции `index()` и
-  `page_not_found()`;
+* `views.py` – функция `page()` (общий HTML-каркас), вспомогательные `load_data()`,
+  `badge()`, `not_found_page()`, view-функции `index()` и `page_not_found()`;
 * `urls.py` – маршрут главной страницы.
 
 Функция `page()` размещена здесь, потому что главная страница задаёт общий вид
@@ -201,6 +243,12 @@ Django-приложение, отвечающее за домены:
 * `urls.py` – маршруты приложения;
 * `models.py` – Django-модели (заполняется в следующих работах).
 
+### `organizations/`, `resources/`, `rentals/`
+
+Django-приложения для организаций, ресурсов и аренды. В каждом: `views.py` –
+view-функции списка и страницы объекта, `urls.py` – маршруты приложения,
+`models.py` – Django-модели (заполняется в следующих работах).
+
 Отдельное приложение для пользователей не создаётся: Django предоставляет
 встроенную модель `User` (`django.contrib.auth`).
 
@@ -208,7 +256,10 @@ Django-приложение, отвечающее за домены:
 
 Классы предметной области и функции работы с ними (пакет ПР3):
 * `domains.py` – класс `Domain` и функции работы с доменами;
-* `users.py` – класс `User` и функции работы с пользователями.
+* `users.py` – класс `User` и функции работы с пользователями;
+* `organizations.py` – класс `Organization` и функции работы с организациями;
+* `resources.py` – класс `Resource` и функции работы с ресурсами;
+* `rentals.py` – класс `Rental` и функции работы с арендой.
 
 ### `storage.py`
 
@@ -221,7 +272,7 @@ Django-приложение, отвечающее за домены:
 
 ### `tests/`
 
-Автоматизированные тесты pytest (сущности `Domain` и `User`).
+Автоматизированные тесты pytest (сущности `Domain`, `User`, `Organization`, `Resource`, `Rental`).
 
 ## Запуск приложения
 
@@ -279,7 +330,8 @@ git status
 ## Текущее состояние и план развития
 
 Реализовано (ПР5):
-* Django-проект `domainreg` и два Django-приложения (`homepage`, `domains`);
+* Django-проект `domainreg` и пять Django-приложений (`homepage`, `domains`,
+  `organizations`, `resources`, `rentals`);
 * маршрутизация URL двух уровней, динамический URL с конвертером `<int:...>`;
 * view-функции и страницы;
 * отображение данных предметной области (домены и их владельцы);
@@ -310,9 +362,9 @@ git status
 | `is_active()` | `models/domains.py` | активность домена на текущую дату; используется страницами |
 | `renew()` / `remove()` | `models/domains.py` | продление срока / «мягкое» удаление |
 | `add_domain()` | `models/domains.py` | создание объекта `Domain` и добавление в коллекцию |
-| `find_domain()` | `models/domains.py` | поиск по названию и организации |
+| `find_domain()` | `models/domains.py` | поиск по названию и названию организации |
 | `find_domain_by_id()` | `models/domains.py` | поиск по идентификатору; используется страницей домена |
-| `filter_domains_by_organization()` | `models/domains.py` | отбор доменов организации |
+| `filter_domains_by_organization()` | `models/domains.py` | отбор доменов по id организации; используется страницей организации |
 | `sort_domains_by_expiration()` | `models/domains.py` | сортировка по сроку регистрации |
 | `renew_domain()` / `remove_domain()` | `models/domains.py` | поиск домена по id и вызов `renew()` / `remove()` |
 | `get_domain_status()` | `models/domains.py` | текстовый статус домена (функция из ПР1) |
@@ -330,12 +382,49 @@ git status
 | `find_user_by_id()` | `models/users.py` | поиск по идентификатору; используется при загрузке доменов |
 | `show_users()` | `models/users.py` | вывод пользователей в консоль |
 
+Сущность Organization – организация:
+
+| Имя функции | Файл | Назначение |
+|---|---|---|
+| `Organization` (класс) | `models/organizations.py` | организация: id, name |
+| `from_data()` | `models/organizations.py` | создание `Organization` из данных JSON |
+| `add_organization()` / `find_organization()` | `models/organizations.py` | добавление / поиск по названию |
+| `find_organization_by_id()` | `models/organizations.py` | поиск по id; используется при загрузке доменов и страницей организации |
+| `show_organizations()` | `models/organizations.py` | вывод в консоль |
+
+Сущность Resource – ресурс домена:
+
+| Имя функции | Файл | Назначение |
+|---|---|---|
+| `Resource` (класс) | `models/resources.py` | ресурс: id, name, kind, domain |
+| `is_active()` | `models/resources.py` | активность ресурса (по домену) |
+| `add_resource()` | `models/resources.py` | создание ресурса и добавление в коллекцию |
+| `find_resource_by_id()` | `models/resources.py` | поиск по id; используется страницей ресурса |
+| `filter_resources_by_domain()` | `models/resources.py` | ресурсы домена; используется страницей домена |
+| `show_resources()` | `models/resources.py` | вывод в консоль |
+
+Сущность Rental – аренда домена:
+
+| Имя функции | Файл | Назначение |
+|---|---|---|
+| `Rental` (класс) | `models/rentals.py` | аренда: id, user, domain, start_date, end_date, is_cancelled |
+| `is_active()` / `cancel()` | `models/rentals.py` | действует ли аренда / отмена с сохранением истории |
+| `create_rental()` | `models/rentals.py` | создание аренды и добавление в коллекцию |
+| `find_rental_by_id()` | `models/rentals.py` | поиск по id; используется страницей аренды |
+| `cancel_rental()` | `models/rentals.py` | поиск аренды по id и вызов `cancel()` |
+| `get_rental_status()` | `models/rentals.py` | текстовый статус: действует / завершена / отменена |
+| `show_rentals()` | `models/rentals.py` | вывод в консоль |
+
 Хранение данных (`storage.py`, ПР3):
 
 | Имя функции | Назначение |
 |---|---|
 | `load_users()` / `save_users()` | `data/users.json` ↔ объекты `User` |
-| `load_domains()` / `save_domains()` | `data/domains.json` ↔ объекты `Domain`; `load_domains()` используется веб-страницами |
+| `load_organizations()` / `save_organizations()` | `data/organizations.json` ↔ объекты `Organization` |
+| `load_domains()` / `save_domains()` | `data/domains.json` ↔ объекты `Domain` (связи по `owner_id`, `organization_id`) |
+| `load_resources()` / `save_resources()` | `data/resources.json` ↔ объекты `Resource` |
+| `load_rentals()` / `save_rentals()` | `data/rentals.json` ↔ объекты `Rental` |
+| `load_registry()` | загрузка всех файлов и связывание объектов; используется веб-страницами |
 
 Веб-слой (ПР5):
 
@@ -344,10 +433,14 @@ git status
 | `page()` | `homepage/views.py` | единый HTML-каркас: кодировка, заголовок, Bootstrap 5.3, навигация |
 | `index()` | `homepage/views.py` | главная страница `/` |
 | `page_not_found()` | `homepage/views.py` | собственная страница 404 |
-| `load_all_domains()` | `domains/views.py` | загрузка доменов и владельцев из JSON |
+| `load_data()` | `homepage/views.py` | загрузка всех данных ПР3 (`load_registry()`) |
+| `badge()` / `not_found_page()` | `homepage/views.py` | бейдж статуса / страница «не найдено» с кодом 404 |
 | `get_status_label()` | `domains/views.py` | текст статуса и цвет бейджа Bootstrap |
 | `domains()` | `domains/views.py` | страница `/domains/`: список доменов |
 | `domain_detail()` | `domains/views.py` | страница `/domains/<int:domain_id>/`; если домен не найден – 404 |
+| `organizations()` / `organization_detail()` | `organizations/views.py` | список организаций и страница организации |
+| `resources()` / `resource_detail()` | `resources/views.py` | список ресурсов и страница ресурса |
+| `rentals()` / `rental_detail()` | `rentals/views.py` | список аренд и страница аренды |
 
 Функции сущностей и хранилища используются одновременно консольной и веб-версией
 приложения: view-функции вызывают `load_domains()`, `load_users()` и

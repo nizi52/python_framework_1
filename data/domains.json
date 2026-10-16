@@ -2,7 +2,7 @@
   {
     "id": 1,
     "name": "example.ru",
-    "organization": "ООО \"Ромашка\"",
+    "organization_id": 1,
     "registration_end": "2026-12-31",
     "owner_id": 1,
     "is_removed": false
@@ -10,7 +10,7 @@
   {
     "id": 2,
     "name": "shop.example.com",
-    "organization": "ИП Петров",
+    "organization_id": 2,
     "registration_end": "2026-10-05",
     "owner_id": 2,
     "is_removed": false
@@ -18,7 +18,7 @@
   {
     "id": 3,
     "name": "old-project.ru",
-    "organization": "ООО \"Ромашка\"",
+    "organization_id": 1,
     "registration_end": "2026-01-15",
     "owner_id": 3,
     "is_removed": false
