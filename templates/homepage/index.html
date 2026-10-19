@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1 class="display-5">{{ title }}</h1>
+    <p class="lead">Учёт доменов, организаций, ресурсов и аренды.</p>
+
+    <p>Активных доменов: <strong>{{ active_domains|length }}</strong> из {{ domains_total }}.</p>
+
+    <div class="row g-3">
+        {% for section in sections %}
+            <div class="col-sm-6 col-lg-3">
+                <a class="card h-100 section-card" href="{% url section.url %}">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ section.title }}</h5>
+                        <p class="card-text">Записей: {{ section.items|length }}</p>
+                    </div>
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

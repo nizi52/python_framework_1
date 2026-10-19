@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% with rental=item.rental %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Аренда №{{ rental.id }}</h5>
+            <p class="card-text">
+                <strong>Домен:</strong>
+                <a href="{% url 'domains:detail' rental.domain.id %}">{{ rental.domain.name }}</a>
+            </p>
+            <p class="card-text">
+                <strong>Арендатор:</strong> {{ rental.user.name }} ({{ rental.user.email|lower }})
+            </p>
+            <p class="card-text">
+                <strong>Период:</strong>
+                {{ rental.start_date|date:"d.m.Y" }} – {{ rental.end_date|date:"d.m.Y" }}
+            </p>
+            <p class="card-text">Статус: {% include "includes/badge.html" with status=item.status css=item.css %}</p>
+            <a href="{% url 'rentals:list' %}" class="btn btn-outline-secondary">← к списку аренд</a>
+        </div>
+    </div>
+    {% endwith %}
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% with resource=item.resource %}
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">{{ resource.name }}</h5>
+            <p class="card-text"><strong>ID:</strong> {{ resource.id }}</p>
+            <p class="card-text"><strong>Тип:</strong> {{ resource.kind }}</p>
+            <p class="card-text">
+                <strong>Домен:</strong>
+                <a href="{% url 'domains:detail' resource.domain.id %}">{{ resource.domain.name }}</a>
+            </p>
+            <p class="card-text">Статус: {% include "includes/badge.html" with status=item.status css=item.css %}</p>
+            <a href="{% url 'resources:list' %}" class="btn btn-outline-secondary">← к списку ресурсов</a>
+        </div>
+    </div>
+    {% endwith %}
+{% endblock %}

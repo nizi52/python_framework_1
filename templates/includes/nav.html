@@ -1,0 +1,14 @@
+{% load static %}
+<nav class="site-nav">
+    <a class="site-nav__brand" href="{% url 'homepage:index' %}">
+        <img src="{% static 'img/logo.svg' %}" alt="Логотип" width="28" height="28">
+        <span>DomainReg</span>
+    </a>
+    <div class="nav">
+        <a class="nav-link" href="{% url 'homepage:index' %}">Главная</a>
+        <a class="nav-link" href="{% url 'domains:list' %}">Домены</a>
+        <a class="nav-link" href="{% url 'organizations:list' %}">Организации</a>
+        <a class="nav-link" href="{% url 'resources:list' %}">Ресурсы</a>
+        <a class="nav-link" href="{% url 'rentals:list' %}">Аренда</a>
+    </div>
+</nav>

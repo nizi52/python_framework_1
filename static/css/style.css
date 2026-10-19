@@ -1,0 +1,90 @@
+/* Оформление веб-интерфейса «Система учета доменных имен» (перенесено из STYLES ПР5). */
+:root {
+    --bg: #631e29;
+    --text: #ebdecd;
+    --panel: #304059;
+    --accent: #b04530;
+    --dark: #1b1c1d;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main { flex: 1; }
+
+.site-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 12px 24px;
+    padding: 12px 16px;
+    background-color: var(--panel);
+}
+
+.site-nav__brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.nav {
+    --bs-nav-link-color: var(--text);
+    --bs-nav-link-hover-color: var(--accent);
+}
+
+.nav-link.active {
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+}
+
+.card {
+    --bs-card-bg: var(--panel);
+    --bs-card-color: var(--text);
+    --bs-card-border-color: var(--panel);
+}
+
+.section-card {
+    text-decoration: none;
+    transition: transform 0.15s ease;
+}
+
+.section-card:hover { transform: translateY(-2px); }
+
+a { color: var(--text); }
+a:hover { color: var(--accent); }
+
+.table-dark {
+    --bs-table-bg: var(--panel);
+    --bs-table-color: var(--text);
+}
+
+.text-danger { color: var(--text) !important; }
+.text-muted { color: rgba(235, 222, 205, 0.7) !important; }
+
+.table-filter,
+.table-filter:focus {
+    max-width: 420px;
+    background-color: var(--panel);
+    color: var(--text);
+    border-color: var(--panel);
+}
+.table-filter:focus {
+    border-color: var(--panel);
+    box-shadow: 0 0 0 0.2rem rgba(176, 69, 48, .4);
+}
+
+.table-filter::placeholder { color: rgba(235, 222, 205, 0.6); }
+
+.site-footer {
+    padding: 16px 0;
+    font-size: 0.85rem;
+    color: rgba(235, 222, 205, 0.6);
+}

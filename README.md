@@ -4,7 +4,8 @@
 
 Приложение для учёта доменных имён, их владельцев и организаций, а также
 контроля сроков регистрации. Консольная версия приложения (ПР3) дополнена
-веб-интерфейсом на Django (ПР5).
+веб-интерфейсом на Django (ПР5), страницы которого с ПР6 формируются
+шаблонами Django.
 
 Приложение позволяет:
 * просматривать списки доменов, организаций, ресурсов и аренд в браузере;
@@ -20,8 +21,9 @@
 
 * Python 3.11+;
 * Django 5.2 – веб-фреймворк;
-* HTML – разметка веб-страниц;
+* HTML и шаблоны Django (Django Template Language) – разметка веб-страниц;
 * CSS и Bootstrap 5.3 – оформление страниц;
+* JavaScript – подсветка текущего раздела и быстрый поиск по таблицам;
 * pytest – автоматизированные тесты;
 * flake8 – проверка качества кода;
 * black – форматирование кода.
@@ -93,30 +95,56 @@
 
 ## Страницы веб-интерфейса
 
-* `/` – главная страница: описание приложения и навигация
-  (view-функция `index()`);
-* `/domains/` – список доменов: объекты `Domain` из `data/domains.json`
-  (view-функция `domains()`);
-* `/domains/<int:domain_id>/` – страница домена
-  (view-функция `domain_detail()`);
-* `/organizations/` и `/organizations/<int:organization_id>/` – список и страница
-  организации с её доменами (`organizations()`, `organization_detail()`);
-* `/resources/` и `/resources/<int:resource_id>/` – список и страница ресурса
-  (`resources()`, `resource_detail()`);
-* `/rentals/` и `/rentals/<int:rental_id>/` – список и страница аренды
-  (`rentals()`, `rental_detail()`).
+| Адрес | Имя маршрута | View-функция | Шаблон |
+|---|---|---|---|
+| `/` | `homepage:index` | `index()` | `homepage/index.html` |
+| `/domains/` | `domains:list` | `domain_list()` | `domains/domain_list.html` |
+| `/domains/<int:domain_id>/` | `domains:detail` | `domain_detail()` | `domains/domain_detail.html` |
+| `/organizations/` | `organizations:list` | `organization_list()` | `organizations/organization_list.html` |
+| `/organizations/<int:organization_id>/` | `organizations:detail` | `organization_detail()` | `organizations/organization_detail.html` |
+| `/resources/` | `resources:list` | `resource_list()` | `resources/resource_list.html` |
+| `/resources/<int:resource_id>/` | `resources:detail` | `resource_detail()` | `resources/resource_detail.html` |
+| `/rentals/` | `rentals:list` | `rental_list()` | `rentals/rental_list.html` |
+| `/rentals/<int:rental_id>/` | `rentals:detail` | `rental_detail()` | `rentals/rental_detail.html` |
 
 Если объект с указанным идентификатором не найден, страница возвращает код
-статуса 404. Для любого адреса, которому не нашлось маршрута, работает
-собственная страница 404 (`handler404` → `page_not_found()`).
+статуса 404 и шаблон `not_found.html`. Для любого адреса, которому не нашлось
+маршрута, работает собственная страница 404 (`handler404` → `page_not_found()`,
+шаблон `404.html`).
+
+## Шаблоны Django (ПР6)
+
+HTML больше не формируется в Python: функция `page()` и f-строки с разметкой
+удалены, view-функции готовят словарь контекста и вызывают `render()`.
+
+* `templates/base.html` – базовый шаблон: `<head>`, Bootstrap, собственный CSS,
+  навигация, подвал, JavaScript и блоки `{% block title %}`, `{% block content %}`;
+* все страницы наследуют его через `{% extends "base.html" %}`;
+* `templates/includes/` – включаемые шаблоны (`{% include %}`):
+  `nav.html` (навигация), `footer.html` (подвал), `badge.html` (бейдж статуса),
+  `table_filter.html` (поле быстрого поиска по таблице);
+* в шаблонах используются `{% for %}` с `{% empty %}`, `{% if %}`, `{% with %}`
+  и обработка пустых списков;
+* ссылки строятся через `{% url %}` по именам маршрутов с пространствами имён
+  (`app_name` в `urls.py` каждого приложения): `{% url 'domains:detail' row.domain.id %}`;
+* фильтры шаблонов: `date` (формат дат), `length` (количество записей),
+  `default`, `lower`, `upper`, `timeuntil` (сколько осталось до окончания
+  регистрации), тег `{% now %}`;
+* статические файлы (`{% load static %}`): `static/css/style.css` – оформление
+  (цвета вынесены из Python в CSS), `static/img/logo.svg` – логотип в навигации,
+  `static/js/main.js` – подсветка текущего раздела и фильтрация строк таблицы.
+
+Каталоги шаблонов и статики подключены в `settings.py`:
+`TEMPLATES[0]["DIRS"] = [BASE_DIR / "templates"]`, `STATICFILES_DIRS = [BASE_DIR / "static"]`.
 
 ## Основные операции
 
-### Используется в веб-интерфейсе (ПР5)
+### Используется в веб-интерфейсе (ПР5–ПР6)
 
 * просмотр списка доменов;
 * просмотр информации о домене, его владельце, организации, ресурсах и аренде;
-* проверка статуса домена на текущую дату.
+* проверка статуса домена на текущую дату;
+* быстрый поиск по таблицам доменов, ресурсов и аренд (JavaScript, ПР6).
 
 ### Отложено до следующих работ
 
@@ -204,7 +232,24 @@ domain_registry/
 │   ├── resources.json
 │   └── rentals.json
 │
+├── templates/
+│   ├── base.html
+│   ├── 404.html
+│   ├── not_found.html
+│   ├── includes/        (nav, footer, badge, table_filter)
+│   ├── homepage/index.html
+│   ├── domains/         (domain_list.html, domain_detail.html)
+│   ├── organizations/   (organization_list.html, organization_detail.html)
+│   ├── resources/       (resource_list.html, resource_detail.html)
+│   └── rentals/         (rental_list.html, rental_detail.html)
+│
+├── static/
+│   ├── css/style.css
+│   ├── img/logo.svg
+│   └── js/main.js
+│
 └── tests/
+    ├── test_views.py
     ├── test_domains.py
     ├── test_users.py
     ├── test_organizations.py
@@ -229,18 +274,17 @@ domain_registry/
 ### `homepage/`
 
 Django-приложение, отвечающее за главную страницу:
-* `views.py` – функция `page()` (общий HTML-каркас), вспомогательные `load_data()`,
-  `badge()`, `not_found_page()`, view-функции `index()` и `page_not_found()`;
-* `urls.py` – маршрут главной страницы.
+* `views.py` – вспомогательные `load_data()` и `not_found()` (ответ 404 по шаблону
+  `not_found.html`), view-функции `index()` и `page_not_found()`;
+* `urls.py` – маршрут главной страницы (`app_name = "homepage"`).
 
-Функция `page()` размещена здесь, потому что главная страница задаёт общий вид
-всех остальных страниц. Остальные приложения импортируют её.
+Общий вид всех страниц задаётся базовым шаблоном `templates/base.html`.
 
 ### `domains/`
 
 Django-приложение, отвечающее за домены:
-* `views.py` – view-функции `domains()` и `domain_detail()`;
-* `urls.py` – маршруты приложения;
+* `views.py` – view-функции `domain_list()` и `domain_detail()`, `get_status_label()`;
+* `urls.py` – маршруты приложения (`app_name = "domains"`, имена `list`, `detail`);
 * `models.py` – Django-модели (заполняется в следующих работах).
 
 ### `organizations/`, `resources/`, `rentals/`
@@ -272,7 +316,8 @@ view-функции списка и страницы объекта, `urls.py` �
 
 ### `tests/`
 
-Автоматизированные тесты pytest (сущности `Domain`, `User`, `Organization`, `Resource`, `Rental`).
+Автоматизированные тесты pytest: сущности `Domain`, `User`, `Organization`, `Resource`,
+`Rental` и веб-страницы (`test_views.py`: шаблоны, контекст, именованные URL, статика, 404).
 
 ## Запуск приложения
 
@@ -321,8 +366,8 @@ black .
 
 ## Git
 
-Исходный код проекта хранится в Git-репозитории. Коммиты ПР5 начинаются с
-метки `PR5:`. Проверка состояния репозитория:
+Исходный код проекта хранится в Git-репозитории. Коммиты начинаются с
+метки текущей работы: `PR5:`, `PR6:`. Проверка состояния репозитория:
 ```text
 git status
 ```
@@ -340,10 +385,19 @@ git status
 * навигация между страницами;
 * оформление Bootstrap 5.3.
 
+Реализовано (ПР6):
+* перевод всех страниц на шаблоны Django, базовый шаблон и наследование;
+* блоки `{% block %}` и включаемые шаблоны `{% include %}`;
+* передача данных из view в шаблон через контекст;
+* циклы, условия и обработка пустых коллекций в шаблонах;
+* пространства имён приложений и ссылки `{% url %}`;
+* фильтры шаблонов;
+* собственный CSS, изображение и JavaScript из каталога `static/`;
+* отказ от функции `page()`; данные по-прежнему хранятся в JSON (ORM не внедрялся).
+
 Планируется:
 * перенос сущностей `Domain` и `User` в Django ORM;
 * подключение базы данных;
-* переход на шаблоны (`templates/`) и отказ от функции `page()`;
 * формы создания и редактирования доменов;
 * использование отложенной логики ПР3 (добавление, поиск, сортировка,
   продление, удаление, статистика);
