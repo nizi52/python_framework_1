@@ -5,7 +5,7 @@
 Приложение для учёта доменных имён, их владельцев и организаций, а также
 контроля сроков регистрации. Консольная версия приложения (ПР3) дополнена
 веб-интерфейсом на Django (ПР5), страницы которого с ПР6 формируются
-шаблонами Django.
+шаблонами Django, а с ПР7 получают данные из базы SQLite SQL-запросами.
 
 Приложение позволяет:
 * просматривать списки доменов, организаций, ресурсов и аренд в браузере;
@@ -21,6 +21,7 @@
 
 * Python 3.11+;
 * Django 5.2 – веб-фреймворк;
+* SQLite и модуль `sqlite3` стандартной библиотеки Python – хранение данных и SQL-запросы (ПР7);
 * HTML и шаблоны Django (Django Template Language) – разметка веб-страниц;
 * CSS и Bootstrap 5.3 – оформление страниц;
 * JavaScript – подсветка текущего раздела и быстрый поиск по таблицам;
@@ -106,6 +107,9 @@
 | `/resources/<int:resource_id>/` | `resources:detail` | `resource_detail()` | `resources/resource_detail.html` |
 | `/rentals/` | `rentals:list` | `rental_list()` | `rentals/rental_list.html` |
 | `/rentals/<int:rental_id>/` | `rentals:detail` | `rental_detail()` | `rentals/rental_detail.html` |
+| `/domains/available/?date=ГГГГ-ММ-ДД` | `domains:available` | `available_domains()` | `domains/available.html` |
+| `/domains/expiring/?days=N` | `domains:expiring` | `expiring_domains()` | `domains/expiring.html` |
+| `/statistics/` | `homepage:statistics` | `statistics()` | `homepage/statistics.html` |
 
 Если объект с указанным идентификатором не найден, страница возвращает код
 статуса 404 и шаблон `not_found.html`. Для любого адреса, которому не нашлось
@@ -158,19 +162,90 @@ HTML больше не формируется в Python: функция `page()`
 * продление и удаление домена, отмена аренды;
 * статистика по реестру.
 
+## База данных SQLite (ПР7)
+
+С ПР7 веб-интерфейс работает с реляционной базой `data/domainreg.sqlite`.
+JSON-файлы каталога `data/` сохранены: из них база заполняется скриптом импорта,
+и с ними по-прежнему работает консольная версия `main.py`. Django ORM на этом
+этапе не используется – запросы выполняются библиотекой `sqlite3`.
+
+### Структура базы
+
+| Таблица | Поля | Ключи |
+|---|---|---|
+| `users` | `id INTEGER`, `name TEXT`, `email TEXT` (уникальный) | PK `id` |
+| `organizations` | `id INTEGER`, `name TEXT` | PK `id` |
+| `domains` | `id INTEGER`, `name TEXT` (уникальный), `organization_id INTEGER`, `owner_id INTEGER`, `registration_end TEXT` (ГГГГ-ММ-ДД), `is_removed INTEGER` (0/1) | PK `id`; FK `organization_id → organizations.id`, `owner_id → users.id` |
+| `resources` | `id INTEGER`, `name TEXT`, `kind TEXT`, `domain_id INTEGER` | PK `id`; FK `domain_id → domains.id` |
+| `rentals` | `id INTEGER`, `user_id INTEGER`, `domain_id INTEGER`, `start_date TEXT`, `end_date TEXT`, `is_cancelled INTEGER` (0/1) | PK `id`; FK `user_id → users.id`, `domain_id → domains.id`; CHECK `start_date <= end_date` |
+
+Связи: организация и пользователь могут иметь несколько доменов; у домена может
+быть несколько ресурсов и аренд; каждая аренда относится к одному домену и
+одному пользователю. Даты хранятся строками ГГГГ-ММ-ДД – их можно сравнивать
+и сортировать средствами SQL, логические признаки – числами 0/1.
+
+### Файлы
+
+* `sql/schema.sql` – создание таблиц (`CREATE TABLE IF NOT EXISTS`, PRIMARY KEY,
+  FOREIGN KEY, NOT NULL, DEFAULT, UNIQUE, CHECK);
+* `sql/queries.sql` – 18 SQL-запросов проекта с комментариями: выборка и
+  сортировка, `WHERE` (в том числе `BETWEEN`, `LIKE`), `JOIN`, подзапрос `NOT IN`,
+  агрегатные функции `COUNT`, `MIN`, `MAX`, `AVG`, `GROUP BY`, `HAVING`,
+  `LIMIT`/`OFFSET`, `CASE`;
+* `db/database.py` – подключение: `get_connection()` включает
+  `PRAGMA foreign_keys = ON` и `row_factory = sqlite3.Row`, функции
+  `fetch_all()` / `fetch_one()` выполняют запрос с параметрами `?`;
+* `db/import_json.py` – перенос данных из JSON в таблицы (`executemany`,
+  транзакция с `commit()` / `rollback()`), запуск повторно безопасен;
+* `data/domainreg.sqlite` – файл базы данных.
+
+### Создание и заполнение базы
+
+Из корня проекта:
+```text
+python -m db.import_json
+```
+Скрипт создаёт таблицы по `sql/schema.sql`, очищает их и переносит данные из
+JSON. После изменения JSON-файлов (например, через консольную версию) импорт
+нужно запустить повторно.
+
+Проверка запросов в SQLite CLI:
+```text
+sqlite3 data/domainreg.sqlite
+.read sql/queries.sql
+.exit
+```
+
+### Страницы, получающие данные из SQLite
+
+* «Домены» – список доменов с организацией, владельцем и статусом (`JOIN`,
+  статус вычисляется `CASE`), карточка домена с ресурсами и арендами;
+* «Свободные для аренды» – поиск доменов, свободных на выбранную дату
+  (подзапрос `NOT IN`, дата передаётся параметром `?`);
+* «Истекающие» – домены, срок регистрации которых заканчивается в ближайшие
+  N дней (`BETWEEN`, параметр `?`);
+* «Организации» – число доменов у каждой организации (`LEFT JOIN`, `GROUP BY`);
+* «Ресурсы», «Аренда» – списки и карточки (`JOIN` двух и трёх таблиц);
+* «Статистика» – сводные показатели (`COUNT`, `SUM`, `MIN`, `MAX`, `AVG`),
+  группировки по организациям, доменам и типам ресурсов, фильтр групп `HAVING`.
+
+Все значения, которые приходят от пользователя (дата, число дней, минимум
+ресурсов), передаются в запрос только параметрами `?` – подстановка значений
+f-строками в текст SQL не используется.
+
 ## Хранение данных
 
-Данные приложения хранятся в JSON-файлах:
+Исходные данные приложения хранятся в JSON-файлах:
 * `data/domains.json`;
 * `data/users.json`;
 * `data/organizations.json`;
 * `data/resources.json`;
 * `data/rentals.json`.
 
-При загрузке данные из JSON преобразуются в объекты `Domain` и `User`, при
-сохранении объекты преобразуются в данные JSON. Для связи домена с владельцем
-в `domains.json` используются идентификаторы `owner_id` и `organization_id`,
-в `resources.json` – `domain_id`, в `rentals.json` – `user_id` и `domain_id`.
+Консольная версия работает с JSON напрямую: при загрузке данные преобразуются в
+объекты `Domain`, `User` и др., при сохранении – обратно в JSON. Для связей
+используются идентификаторы `owner_id`, `organization_id`, `domain_id`,
+`user_id`. Веб-интерфейс с ПР7 читает данные из SQLite (см. выше).
 
 ## Структура проекта
 
@@ -230,15 +305,25 @@ domain_registry/
 │   ├── users.json
 │   ├── organizations.json
 │   ├── resources.json
-│   └── rentals.json
+│   ├── rentals.json
+│   └── domainreg.sqlite
+│
+├── db/
+│   ├── __init__.py
+│   ├── database.py
+│   └── import_json.py
+│
+├── sql/
+│   ├── schema.sql
+│   └── queries.sql
 │
 ├── templates/
 │   ├── base.html
 │   ├── 404.html
 │   ├── not_found.html
-│   ├── includes/        (nav, footer, badge, table_filter)
-│   ├── homepage/index.html
-│   ├── domains/         (domain_list.html, domain_detail.html)
+│   ├── includes/        (nav, footer, badge, table_filter, domain_table, domain_actions)
+│   ├── homepage/        (index.html, statistics.html)
+│   ├── domains/         (domain_list, domain_detail, available, expiring)
 │   ├── organizations/   (organization_list.html, organization_detail.html)
 │   ├── resources/       (resource_list.html, resource_detail.html)
 │   └── rentals/         (rental_list.html, rental_detail.html)
@@ -249,6 +334,8 @@ domain_registry/
 │   └── js/main.js
 │
 └── tests/
+    ├── conftest.py
+    ├── test_database.py
     ├── test_views.py
     ├── test_domains.py
     ├── test_users.py
@@ -317,7 +404,10 @@ view-функции списка и страницы объекта, `urls.py` �
 ### `tests/`
 
 Автоматизированные тесты pytest: сущности `Domain`, `User`, `Organization`, `Resource`,
-`Rental` и веб-страницы (`test_views.py`: шаблоны, контекст, именованные URL, статика, 404).
+`Rental`, база данных (`test_database.py`: таблицы, внешние ключи, перенос данных, файл
+запросов) и веб-страницы (`test_views.py`: шаблоны, данные из SQLite, поиск по дате,
+параметризованные запросы, статистика, 404). `conftest.py` создаёт для тестов отдельную
+временную базу, рабочая `data/domainreg.sqlite` не изменяется.
 
 ## Запуск приложения
 
@@ -328,6 +418,7 @@ pip install -r requirements.txt
 
 Веб-версия (Django):
 ```text
+python -m db.import_json
 python manage.py migrate
 python manage.py runserver
 ```
@@ -367,7 +458,7 @@ black .
 ## Git
 
 Исходный код проекта хранится в Git-репозитории. Коммиты начинаются с
-метки текущей работы: `PR5:`, `PR6:`. Проверка состояния репозитория:
+метки текущей работы: `PR5:`, `PR6:`, `PR7:`. Проверка состояния репозитория:
 ```text
 git status
 ```
@@ -395,9 +486,18 @@ git status
 * собственный CSS, изображение и JavaScript из каталога `static/`;
 * отказ от функции `page()`; данные по-прежнему хранятся в JSON (ORM не внедрялся).
 
+Реализовано (ПР7):
+* спроектирована реляционная структура базы: 5 таблиц, первичные и внешние ключи;
+* таблицы создаются SQL-скриптом `sql/schema.sql`;
+* данные перенесены из JSON в SQLite скриптом `db/import_json.py`;
+* 18 SQL-запросов предметной области в `sql/queries.sql`;
+* все страницы веб-интерфейса получают данные из SQLite (`sqlite3.Row`,
+  параметры `?`);
+* новые страницы: свободные для аренды домены на дату, истекающие домены,
+  статистика реестра.
+
 Планируется:
 * перенос сущностей `Domain` и `User` в Django ORM;
-* подключение базы данных;
 * формы создания и редактирования доменов;
 * использование отложенной логики ПР3 (добавление, поиск, сортировка,
   продление, удаление, статистика);

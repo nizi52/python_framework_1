@@ -4,7 +4,7 @@
     <h1 class="display-5">{{ title }}</h1>
     <p class="lead">Учёт доменов, организаций, ресурсов и аренды.</p>
 
-    <p>Активных доменов: <strong>{{ active_domains|length }}</strong> из {{ domains_total }}.</p>
+    <p>Активных доменов: <strong>{{ counts.active_domains }}</strong> из {{ counts.domains }}.</p>
 
     <div class="row g-3">
         {% for section in sections %}
@@ -12,10 +12,16 @@
                 <a class="card h-100 section-card" href="{% url section.url %}">
                     <div class="card-body">
                         <h5 class="card-title">{{ section.title }}</h5>
-                        <p class="card-text">Записей: {{ section.items|length }}</p>
+                        <p class="card-text">Записей: {{ section.count }}</p>
                     </div>
                 </a>
             </div>
         {% endfor %}
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mt-4">
+        <a class="btn btn-primary" href="{% url 'domains:available' %}">Найти свободный домен</a>
+        <a class="btn btn-primary" href="{% url 'domains:expiring' %}">Истекающие домены</a>
+        <a class="btn btn-primary" href="{% url 'homepage:statistics' %}">Статистика</a>
     </div>
 {% endblock %}

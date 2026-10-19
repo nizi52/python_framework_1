@@ -12,10 +12,10 @@
                 <tbody>
                     {% for row in rows %}
                         <tr>
-                            <td><a href="{% url 'resources:detail' row.resource.id %}">{{ row.resource.name }}</a></td>
-                            <td>{{ row.resource.kind|upper }}</td>
-                            <td><a href="{% url 'domains:detail' row.resource.domain.id %}">{{ row.resource.domain.name }}</a></td>
-                            <td>{% include "includes/badge.html" with status=row.status css=row.css %}</td>
+                            <td><a href="{% url 'resources:detail' row.id %}">{{ row.name }}</a></td>
+                            <td>{{ row.kind|upper }}</td>
+                            <td><a href="{% url 'domains:detail' row.domain_id %}">{{ row.domain_name }}</a></td>
+                            <td>{% include "includes/badge.html" with status=row.status %}</td>
                         </tr>
                     {% endfor %}
                 </tbody>

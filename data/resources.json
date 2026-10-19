@@ -22,5 +22,23 @@
     "name": "DNS-хостинг",
     "kind": "DNS",
     "domain_id": 3
+  },
+  {
+    "id": 5,
+    "name": "Хостинг Pro",
+    "kind": "Хостинг",
+    "domain_id": 4
+  },
+  {
+    "id": 6,
+    "name": "SSL-сертификат Wildcard",
+    "kind": "SSL",
+    "domain_id": 4
+  },
+  {
+    "id": 7,
+    "name": "Почта команды",
+    "kind": "Почта",
+    "domain_id": 4
   }
 ]

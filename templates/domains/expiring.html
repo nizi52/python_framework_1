@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Истекающие домены</h1>
+    {% include "includes/domain_actions.html" %}
+
+    <form method="get" class="d-flex flex-wrap align-items-end gap-2 mb-3">
+        <div>
+            <label for="days" class="form-label">Период, дней</label>
+            <input type="number" id="days" name="days" min="1" max="3650" class="form-control table-filter" value="{{ days }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Показать</button>
+    </form>
+
+    <h2 class="h5">Регистрация заканчивается в ближайшие {{ days }} дн.: {{ rows|length }}</h2>
+    {% if rows %}
+        {% include "includes/domain_table.html" with show_days=True %}
+    {% else %}
+        <p class="text-muted">В этот период ни у одного домена срок не заканчивается.</p>
+    {% endif %}
+{% endblock %}

@@ -1,40 +1,40 @@
-"""Представления приложения resources: список и страница ресурса."""
+"""Представления приложения resources: список и страница ресурса (SQLite, ПР7)."""
 
 from django.shortcuts import render
 from django.urls import reverse
 
-from homepage.views import load_data, not_found
-from models import Resource
-from models.resources import find_resource_by_id
+from db.database import fetch_all, fetch_one
+from homepage.views import not_found
 
-
-def get_status_label(resource: Resource) -> tuple[str, str]:
-    """Вернуть текст статуса ресурса и класс бейджа Bootstrap."""
-    if resource.is_active():
-        return "активен", "bg-success"
-    return "неактивен", "bg-danger"
-
-
-def with_status(resource: Resource) -> dict:
-    """Упаковать ресурс вместе с его статусом для передачи в шаблон."""
-    status, css = get_status_label(resource)
-    return {"resource": resource, "status": status, "css": css}
+# Ресурс доступен, пока активен домен, к которому он привязан (логика ПР3).
+RESOURCE_QUERY = """
+    SELECT resources.id,
+           resources.name,
+           resources.kind,
+           domains.id AS domain_id,
+           domains.name AS domain_name,
+           CASE
+               WHEN domains.is_removed = 0
+                    AND domains.registration_end >= date('now', 'localtime') THEN 'активен'
+               ELSE 'неактивен'
+           END AS status
+    FROM resources
+    JOIN domains ON resources.domain_id = domains.id
+"""
 
 
 def resource_list(request):
-    """Страница /resources/: таблица ресурсов доменов."""
-    rows = [with_status(resource) for resource in load_data().resources]
+    """Страница /resources/: ресурсы с названием домена (JOIN)."""
+    rows = fetch_all(RESOURCE_QUERY + " ORDER BY domains.name, resources.kind")
     return render(request, "resources/resource_list.html", {"title": "Ресурсы", "rows": rows})
 
 
 def resource_detail(request, resource_id):
     """Страница /resources/<id>/: карточка ресурса или 404."""
-    resource = find_resource_by_id(load_data().resources, resource_id)
-
+    resource = fetch_one(RESOURCE_QUERY + " WHERE resources.id = ?", [resource_id])
     if resource is None:
         return not_found(
             request, "Ресурс не найден", reverse("resources:list"), "← к списку ресурсов"
         )
-
-    context = {"title": resource.name, "item": with_status(resource)}
+    context = {"title": resource["name"], "resource": resource}
     return render(request, "resources/resource_detail.html", context)

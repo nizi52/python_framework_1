@@ -2,36 +2,10 @@
 
 {% block content %}
     <h1>Домены</h1>
+    {% include "includes/domain_actions.html" %}
     {% if rows %}
         {% include "includes/table_filter.html" with target="#domains-table" placeholder="Поиск по домену, организации, владельцу" %}
-        <div class="table-responsive">
-            <table class="table table-hover table-dark" id="domains-table">
-                <thead>
-                    <tr>
-                        <th>Домен</th>
-                        <th>Организация</th>
-                        <th>Владелец</th>
-                        <th>Срок до</th>
-                        <th>Статус</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in rows %}
-                        <tr>
-                            <td><a href="{% url 'domains:detail' row.domain.id %}">{{ row.domain.name|lower }}</a></td>
-                            <td>
-                                <a href="{% url 'organizations:detail' row.domain.organization.id %}">
-                                    {{ row.domain.organization.name }}
-                                </a>
-                            </td>
-                            <td>{{ row.domain.owner.name }}</td>
-                            <td>{{ row.domain.registration_end|date:"d.m.Y" }}</td>
-                            <td>{% include "includes/badge.html" with status=row.status css=row.css %}</td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+        {% include "includes/domain_table.html" %}
         <p class="text-muted">Всего доменов: {{ rows|length }}</p>
     {% else %}
         <p class="text-muted">Реестр доменов пуст.</p>

@@ -1,24 +1,22 @@
 {% extends "base.html" %}
 
 {% block content %}
-    {% with domain=item.domain %}
     <div class="card">
         <div class="card-body">
             <h5 class="card-title">{{ domain.name }}</h5>
             <p class="card-text"><strong>ID:</strong> {{ domain.id }}</p>
             <p class="card-text">
                 <strong>Организация:</strong>
-                <a href="{% url 'organizations:detail' domain.organization.id %}">{{ domain.organization.name }}</a>
+                <a href="{% url 'organizations:detail' domain.organization_id %}">{{ domain.organization_name }}</a>
             </p>
             <p class="card-text">
-                <strong>Владелец:</strong> {{ domain.owner.name }} ({{ domain.owner.email|lower }})
+                <strong>Владелец:</strong> {{ domain.owner_name }} ({{ domain.owner_email|lower }})
             </p>
             <p class="card-text">
-                <strong>Срок регистрации до:</strong> {{ domain.registration_end|date:"d E Y" }}
-                {% if domain.is_active %}(осталось {{ domain.registration_end|timeuntil }}){% endif %}
+                <strong>Срок регистрации до:</strong> {{ domain.registration_end_display }}
             </p>
             <p class="card-text">
-                Статус на текущую дату: {% include "includes/badge.html" with status=item.status css=item.css %}
+                Статус на текущую дату: {% include "includes/badge.html" with status=domain.status %}
             </p>
 
             <p class="card-text"><strong>Ресурсы ({{ resources|length }}):</strong></p>
@@ -35,8 +33,8 @@
                 {% for rental in rentals %}
                     <li>
                         <a href="{% url 'rentals:detail' rental.id %}">Аренда №{{ rental.id }}</a>:
-                        {{ rental.user.name }}, {{ rental.start_date|date:"d.m.Y" }} – {{ rental.end_date|date:"d.m.Y" }}
-                        {% if rental.is_cancelled %}<span class="badge bg-danger">отменена</span>{% endif %}
+                        {{ rental.user_name }}, {{ rental.start_display }} – {{ rental.end_display }}
+                        {% include "includes/badge.html" with status=rental.status %}
                     </li>
                 {% empty %}
                     <li>нет</li>
@@ -46,5 +44,4 @@
             <a href="{% url 'domains:list' %}" class="btn btn-outline-secondary">← к списку доменов</a>
         </div>
     </div>
-    {% endwith %}
 {% endblock %}

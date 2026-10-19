@@ -22,5 +22,29 @@
     "registration_end": "2026-01-15",
     "owner_id": 3,
     "is_removed": false
+  },
+  {
+    "id": 4,
+    "name": "mirea-team.ru",
+    "organization_id": 2,
+    "registration_end": "2027-06-30",
+    "owner_id": 1,
+    "is_removed": false
+  },
+  {
+    "id": 5,
+    "name": "blog-ivanov.ru",
+    "organization_id": 1,
+    "registration_end": "2027-03-15",
+    "owner_id": 1,
+    "is_removed": false
+  },
+  {
+    "id": 6,
+    "name": "archive.example.org",
+    "organization_id": 2,
+    "registration_end": "2027-01-10",
+    "owner_id": 2,
+    "is_removed": true
   }
 ]

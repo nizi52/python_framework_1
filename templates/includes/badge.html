@@ -1,1 +1,1 @@
-<span class="badge {{ css }}">{{ status }}</span>
+<span class="badge {% if status == 'активен' or status == 'действует' %}bg-success{% elif status == 'запланирована' %}bg-info{% elif status == 'удалён' or status == 'завершена' %}bg-secondary{% else %}bg-danger{% endif %}">{{ status }}</span>

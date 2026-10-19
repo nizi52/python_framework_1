@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Свободные для аренды домены</h1>
+    {% include "includes/domain_actions.html" %}
+
+    <form method="get" class="d-flex flex-wrap align-items-end gap-2 mb-3">
+        <div>
+            <label for="date" class="form-label">Дата аренды</label>
+            <input type="date" id="date" name="date" class="form-control table-filter" value="{{ raw_date }}">
+        </div>
+        <button type="submit" class="btn btn-primary">Найти</button>
+    </form>
+
+    {% if error %}
+        <p class="text-warning">{{ error }}</p>
+    {% elif selected %}
+        <h2 class="h5">На {{ selected|date:"d E Y" }} свободно: {{ rows|length }}</h2>
+        {% if rows %}
+            {% include "includes/domain_table.html" %}
+        {% else %}
+            <p class="text-muted">На выбранную дату свободных доменов нет.</p>
+        {% endif %}
+    {% else %}
+        <p class="text-muted">Выберите дату – будут показаны домены, которые на эту дату действуют и не сданы в аренду.</p>
+    {% endif %}
+{% endblock %}

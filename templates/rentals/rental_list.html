@@ -2,6 +2,13 @@
 
 {% block content %}
     <h1>Аренда доменов</h1>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        {% if show_all %}
+            <a class="btn btn-outline-light btn-sm" href="{% url 'rentals:list' %}">Только неотменённые</a>
+        {% else %}
+            <a class="btn btn-outline-light btn-sm" href="{% url 'rentals:list' %}?all=1">Показать и отменённые</a>
+        {% endif %}
+    </div>
     {% if rows %}
         {% include "includes/table_filter.html" with target="#rentals-table" placeholder="Поиск по домену, арендатору, статусу" %}
         <div class="table-responsive">
@@ -15,12 +22,12 @@
                 <tbody>
                     {% for row in rows %}
                         <tr>
-                            <td><a href="{% url 'rentals:detail' row.rental.id %}">№{{ row.rental.id }}</a></td>
-                            <td><a href="{% url 'domains:detail' row.rental.domain.id %}">{{ row.rental.domain.name }}</a></td>
-                            <td>{{ row.rental.user.name }}</td>
-                            <td>{{ row.rental.start_date|date:"d.m.Y" }}</td>
-                            <td>{{ row.rental.end_date|date:"d.m.Y" }}</td>
-                            <td>{% include "includes/badge.html" with status=row.status css=row.css %}</td>
+                            <td><a href="{% url 'rentals:detail' row.id %}">№{{ row.id }}</a></td>
+                            <td><a href="{% url 'domains:detail' row.domain_id %}">{{ row.domain_name }}</a></td>
+                            <td>{{ row.user_name }}</td>
+                            <td>{{ row.start_display }}</td>
+                            <td>{{ row.end_display }}</td>
+                            <td>{% include "includes/badge.html" with status=row.status %}</td>
                         </tr>
                     {% endfor %}
                 </tbody>

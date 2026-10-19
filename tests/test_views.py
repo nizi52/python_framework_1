@@ -1,14 +1,8 @@
-"""Проверка веб-страниц Django: шаблоны, контекст, именованные URL (ПР6)."""
-
-import os
-import sys
-from pathlib import Path
+"""Проверка веб-страниц Django: шаблоны (ПР6) и данные из SQLite (ПР7)."""
 
 import django
 from django.test.utils import setup_test_environment
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "domainreg.settings")
 django.setup()
 setup_test_environment()
 
@@ -27,7 +21,7 @@ def test_index_uses_base_template():
     assert "includes/nav.html" in names
 
 
-def test_list_pages_render_from_templates():
+def test_list_pages_render_from_sqlite():
     pages = {
         "domains:list": "domains/domain_list.html",
         "organizations:list": "organizations/organization_list.html",
@@ -45,7 +39,7 @@ def test_detail_pages_and_named_urls():
     assert reverse("domains:detail", args=[1]) == "/domains/1/"
     response = client.get(reverse("domains:detail", args=[1]))
     assert response.status_code == 200
-    assert response.context["item"]["domain"].name == "example.ru"
+    assert response.context["domain"]["name"] == "example.ru"
     for url_name in ("organizations:detail", "resources:detail", "rentals:detail"):
         assert client.get(reverse(url_name, args=[1])).status_code == 200
 
@@ -54,6 +48,39 @@ def test_missing_object_returns_404_template():
     response = client.get(reverse("domains:detail", args=[999]))
     assert response.status_code == 404
     assert "not_found.html" in [t.name for t in response.templates]
+
+
+def test_available_domains_by_date():
+    url = reverse("domains:available")
+    assert client.get(url).context["rows"] == []
+    names = [row["name"] for row in client.get(url, {"date": "2026-11-15"}).context["rows"]]
+    assert "mirea-team.ru" in names        # действует, аренда начнётся только 01.12
+    assert "blog-ivanov.ru" not in names   # сдан в аренду до 30.11
+    assert "example.ru" not in names       # сдан в аренду до 31.12
+    assert "archive.example.org" not in names  # исключён из реестра
+
+
+def test_available_domains_bad_date():
+    response = client.get(reverse("domains:available"), {"date": "завтра"})
+    assert response.status_code == 200
+    assert response.context["error"]
+
+
+def test_parameter_is_not_injected():
+    response = client.get(reverse("domains:available"), {"date": "2026-11-15' OR '1'='1"})
+    assert response.status_code == 200
+    assert response.context["rows"] == []
+
+
+def test_expiring_and_statistics_pages():
+    response = client.get(reverse("domains:expiring"), {"days": "3650"})
+    assert response.status_code == 200
+    assert all(row["days_left"] >= 0 for row in response.context["rows"])
+
+    stats = client.get(reverse("homepage:statistics"))
+    assert stats.status_code == 200
+    assert stats.context["summary"]["domains_total"] >= 1
+    assert len(stats.context["by_organization"]) >= 1
 
 
 def test_static_files_are_linked():

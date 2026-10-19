@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Статистика реестра</h1>
+
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body">
+            <p class="card-text mb-1">Доменов в реестре</p>
+            <p class="h3 mb-0">{{ summary.domains_total }}</p>
+        </div></div></div>
+        <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body">
+            <p class="card-text mb-1">Из них активных</p>
+            <p class="h3 mb-0">{{ summary.domains_active|default:0 }}</p>
+        </div></div></div>
+        <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body">
+            <p class="card-text mb-1">Ближайшее окончание</p>
+            <p class="h3 mb-0">{{ summary.nearest_end|default:"—" }}</p>
+        </div></div></div>
+        <div class="col-sm-6 col-lg-3"><div class="card h-100"><div class="card-body">
+            <p class="card-text mb-1">Средняя аренда, дней</p>
+            <p class="h3 mb-0">{{ avg_rental.avg_days|default:"—" }}</p>
+        </div></div></div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <h2 class="h5">Доменов по организациям</h2>
+            <table class="table table-dark">
+                <thead><tr><th>Организация</th><th>Доменов</th></tr></thead>
+                <tbody>
+                    {% for item in by_organization %}
+                        <tr><td>{{ item.organization_name }}</td><td>{{ item.domains_count }}</td></tr>
+                    {% empty %}
+                        <tr><td colspan="2">Данные отсутствуют.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-lg-6">
+            <h2 class="h5">Аренд по доменам (без отменённых)</h2>
+            <table class="table table-dark">
+                <thead><tr><th>Домен</th><th>Аренд</th></tr></thead>
+                <tbody>
+                    {% for item in rentals_by_domain %}
+                        <tr>
+                            <td><a href="{% url 'domains:detail' item.domain_id %}">{{ item.domain_name }}</a></td>
+                            <td>{{ item.rentals_count }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="2">Данные отсутствуют.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-lg-6">
+            <h2 class="h5">Ресурсы по типам</h2>
+            <table class="table table-dark">
+                <thead><tr><th>Тип</th><th>Количество</th></tr></thead>
+                <tbody>
+                    {% for item in resources_by_kind %}
+                        <tr><td>{{ item.kind }}</td><td>{{ item.resources_count }}</td></tr>
+                    {% empty %}
+                        <tr><td colspan="2">Данные отсутствуют.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-lg-6">
+            <h2 class="h5">Домены, у которых ресурсов не меньше {{ min_resources }}</h2>
+            <form method="get" class="d-flex gap-2 mb-2">
+                <label for="min_resources" class="visually-hidden">Минимум ресурсов</label>
+                <input type="number" id="min_resources" name="min_resources" min="1" value="{{ min_resources }}" class="form-control table-filter" style="max-width: 120px">
+                <button type="submit" class="btn btn-primary btn-sm">Применить</button>
+            </form>
+            <table class="table table-dark">
+                <thead><tr><th>Домен</th><th>Ресурсов</th></tr></thead>
+                <tbody>
+                    {% for item in rich_domains %}
+                        <tr>
+                            <td><a href="{% url 'domains:detail' item.domain_id %}">{{ item.domain_name }}</a></td>
+                            <td>{{ item.resources_count }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr><td colspan="2">Таких доменов нет.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

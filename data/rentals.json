@@ -22,5 +22,21 @@
     "start_date": "2026-03-01",
     "end_date": "2026-12-01",
     "is_cancelled": true
+  },
+  {
+    "id": 4,
+    "user_id": 4,
+    "domain_id": 5,
+    "start_date": "2026-09-01",
+    "end_date": "2026-11-30",
+    "is_cancelled": false
+  },
+  {
+    "id": 5,
+    "user_id": 3,
+    "domain_id": 4,
+    "start_date": "2026-12-01",
+    "end_date": "2027-02-28",
+    "is_cancelled": false
   }
 ]

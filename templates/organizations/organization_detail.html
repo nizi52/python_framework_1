@@ -7,11 +7,11 @@
             <p class="card-text"><strong>ID:</strong> {{ organization.id }}</p>
             <p class="card-text"><strong>Домены организации ({{ domains|length }}):</strong></p>
             <ul>
-                {% for item in domains %}
+                {% for domain in domains %}
                     <li>
-                        <a href="{% url 'domains:detail' item.domain.id %}">{{ item.domain.name }}</a>
-                        – до {{ item.domain.registration_end|date:"d.m.Y" }}
-                        {% include "includes/badge.html" with status=item.status css=item.css %}
+                        <a href="{% url 'domains:detail' domain.id %}">{{ domain.name }}</a>
+                        – до {{ domain.registration_end_display }}
+                        {% include "includes/badge.html" with status=domain.status %}
                     </li>
                 {% empty %}
                     <li>нет</li>
