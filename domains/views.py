@@ -9,7 +9,7 @@
 from datetime import date, timedelta
 
 from django.db.models import Q
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
@@ -55,22 +55,34 @@ def domain_list(request):
     return render(request, "domains/domain_list.html", context)
 
 
-def domain_detail(request, domain_id):
-    """Страница /domains/<id>/: карточка домена, его ресурсы и аренды, или 404."""
+def domain_not_found(request):
+    return not_found(request, "Домен не найден", reverse("domains:list"), "← к списку доменов")
+
+
+def domain_detail(request, slug):
+    """Страница /domains/<slug>/: карточка домена, его ресурсы и аренды, или 404."""
     try:
         domain = (
-            Domain.objects.select_related("organization", "owner").with_status().get(pk=domain_id)
+            Domain.objects.select_related("organization", "owner").with_status().get(slug=slug)
         )
     except Domain.DoesNotExist:
-        return not_found(request, "Домен не найден", reverse("domains:list"), "← к списку доменов")
+        return domain_not_found(request)
 
     context = {
         "title": domain.name,
         "domain": domain,
         "resources": domain.resources.order_by("kind"),
-        "rentals": domain.rentals.select_related("user").with_status(),
+        "rentals": domain.rentals.select_related("user").with_state(),
     }
     return render(request, "domains/domain_detail.html", context)
+
+
+def domain_detail_by_id(request, domain_id):
+    """Адрес /domains/<id>/ из ПР5–ПР9: постоянное перенаправление на страницу по slug."""
+    domain = Domain.objects.filter(pk=domain_id).only("slug").first()
+    if domain is None:
+        return domain_not_found(request)
+    return redirect(domain, permanent=True)
 
 
 def parse_date(value):

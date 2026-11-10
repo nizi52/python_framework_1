@@ -10,5 +10,7 @@ urlpatterns = [
     path("", views.domain_list, name="list"),
     path("available/", views.available_domains, name="available"),
     path("expiring/", views.expiring_domains, name="expiring"),
-    path("<int:domain_id>/", views.domain_detail, name="detail"),
+    # Старые адреса по id перенаправляют на адрес по slug.
+    path("<int:domain_id>/", views.domain_detail_by_id, name="detail_by_id"),
+    path("<slug:slug>/", views.domain_detail, name="detail"),
 ]

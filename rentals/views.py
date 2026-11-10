@@ -1,6 +1,6 @@
 """Представления приложения rentals: список аренд и страница аренды (Django ORM).
 
-Список поддерживает фильтры (дата, домен, арендатор, показ отменённых), выбор
+Список поддерживает фильтры (статус, дата, домен, арендатор), выбор
 сортировки и постраничный вывод. Параметры берутся из строки запроса и проверяются.
 """
 
@@ -28,10 +28,13 @@ RENTAL_SORT_FIELDS = {
 def rental_list(request):
     """Страница /rentals/: аренды доменов с фильтрами, сортировкой и пагинацией.
 
-    Параметры: all=1 (показать и отменённые), date=ГГГГ-ММ-ДД (аренды, действующие
-    в этот день), domain=<id>, user=<id>, sort=start|end|domain|user, page=N.
+    Параметры: status=all|cancelled|completed (по умолчанию только активные; all=1 из ПР9
+    означает status=all), date=ГГГГ-ММ-ДД (аренды, действующие в этот день),
+    domain=<id>, user=<id>, sort=start|end|domain|user, page=N.
     """
-    show_all = request.GET.get("all") == "1"
+    status = request.GET.get("status", "")
+    if request.GET.get("all") == "1":
+        status = "all"
     raw_date = request.GET.get("date", "").strip()
     domain_id = request.GET.get("domain", "").strip()
     user_id = request.GET.get("user", "").strip()
@@ -41,14 +44,17 @@ def rental_list(request):
     error = None
 
     rentals = Rental.objects.all()
-    if not show_all:
-        rentals = rentals.not_cancelled()
+    if status in (Rental.Status.CANCELLED, Rental.Status.COMPLETED):
+        rentals = rentals.filter(status=status)
+    elif status != "all":
+        status = ""
+        rentals = rentals.active()
     if raw_date:
         selected = parse_date(raw_date)
         if selected is None:
             error = "Укажите дату в формате ГГГГ-ММ-ДД."
         else:
-            rentals = rentals.filter(start_date__lte=selected, end_date__gte=selected)
+            rentals = rentals.for_date(selected)
     if domain_id.isdigit():
         rentals = rentals.filter(domain_id=int(domain_id))
     if user_id.isdigit():
@@ -60,7 +66,7 @@ def rental_list(request):
         "title": "Аренда",
         "rows": page_obj,
         "page_obj": page_obj,
-        "show_all": show_all,
+        "status": status,
         "raw_date": raw_date,
         "selected_domain": domain_id,
         "selected_user": user_id,
@@ -75,7 +81,7 @@ def rental_list(request):
 def rental_detail(request, rental_id):
     """Страница /rentals/<id>/: карточка аренды или 404."""
     try:
-        rental = Rental.objects.select_related("domain", "user").with_status().get(pk=rental_id)
+        rental = Rental.objects.select_related("domain", "user").with_state().get(pk=rental_id)
     except Rental.DoesNotExist:
         return not_found(request, "Аренда не найдена", reverse("rentals:list"), "← к списку аренд")
     context = {"title": f"Аренда №{rental.id}", "rental": rental}

@@ -34,7 +34,7 @@
                     <li>
                         <a href="{% url 'rentals:detail' rental.id %}">Аренда №{{ rental.id }}</a>:
                         {{ rental.user.name }}, {{ rental.start_date|date:"d.m.Y" }} – {{ rental.end_date|date:"d.m.Y" }}
-                        {% include "includes/badge.html" with status=rental.status %}
+                        {% include "includes/badge.html" with status=rental.state %}
                     </li>
                 {% empty %}
                     <li>нет</li>

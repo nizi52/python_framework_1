@@ -7,46 +7,70 @@ from django.utils import timezone
 from domains.models import Domain
 from users.models import User
 
-STATUS_CANCELLED = "отменена"
-STATUS_PLANNED = "запланирована"
-STATUS_ACTIVE = "действует"
-STATUS_FINISHED = "завершена"
+# Состояние аренды на дату для страниц: вычисляется из статуса и периода аренды.
+STATE_CANCELLED = "отменена"
+STATE_PLANNED = "запланирована"
+STATE_ACTIVE = "действует"
+STATE_FINISHED = "завершена"
 
 
 class RentalQuerySet(models.QuerySet):
+    def active(self):
+        return self.filter(status=self.model.Status.ACTIVE)
+
+    def cancelled(self):
+        return self.filter(status=self.model.Status.CANCELLED)
+
+    def completed(self):
+        return self.filter(status=self.model.Status.COMPLETED)
+
     def not_cancelled(self):
-        return self.filter(is_cancelled=False)
+        """Активные и завершённые аренды: отменённые не учитываются в статистике."""
+        return self.exclude(status=self.model.Status.CANCELLED)
+
+    def for_date(self, day):
+        """Аренды, период которых включает указанную дату, независимо от статуса."""
+        return self.filter(start_date__lte=day, end_date__gte=day)
 
     def active_on(self, day):
-        """Неотменённые аренды, период которых включает указанную дату."""
-        return self.not_cancelled().filter(start_date__lte=day, end_date__gte=day)
+        """Активные аренды на дату: только они блокируют домен."""
+        return self.active().for_date(day)
 
-    def with_status(self, today=None):
-        """Добавить поле status: статус аренды на указанную дату."""
+    def with_state(self, today=None):
+        """Добавить поле state: состояние аренды на дату с учётом статуса и периода."""
         today = today or timezone.localdate()
+        status = self.model.Status
         return self.annotate(
-            status=Case(
-                When(is_cancelled=True, then=Value(STATUS_CANCELLED)),
-                When(start_date__gt=today, then=Value(STATUS_PLANNED)),
-                When(end_date__gte=today, then=Value(STATUS_ACTIVE)),
-                default=Value(STATUS_FINISHED),
+            state=Case(
+                When(status=status.CANCELLED, then=Value(STATE_CANCELLED)),
+                When(status=status.COMPLETED, then=Value(STATE_FINISHED)),
+                When(start_date__gt=today, then=Value(STATE_PLANNED)),
+                When(end_date__gte=today, then=Value(STATE_ACTIVE)),
+                default=Value(STATE_FINISHED),
                 output_field=models.CharField(),
             ),
         )
 
     def as_rows(self, today=None):
-        return self.with_status(today).values(
+        return self.with_state(today).values(
             "id",
             "domain_id",
             "start_date",
             "end_date",
             "status",
+            "state",
             domain_name=F("domain__name"),
+            domain_slug=F("domain__slug"),
             user_name=F("user__name"),
         )
 
 
 class Rental(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "active", "Активна"
+        CANCELLED = "cancelled", "Отменена"
+        COMPLETED = "completed", "Завершена"
+
     user = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
@@ -61,7 +85,12 @@ class Rental(models.Model):
     )
     start_date = models.DateField(verbose_name="Начало аренды")
     end_date = models.DateField(verbose_name="Окончание аренды")
-    is_cancelled = models.BooleanField(default=False, verbose_name="Аренда отменена")
+    status = models.CharField(
+        max_length=12,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+        verbose_name="Статус аренды",
+    )
 
     objects = RentalQuerySet.as_manager()
 
@@ -85,5 +114,5 @@ class Rental(models.Model):
 
     def cancel(self):
         """Отменить аренду: запись сохраняется, но перестаёт блокировать домен."""
-        self.is_cancelled = True
-        self.save(update_fields=["is_cancelled"])
+        self.status = self.Status.CANCELLED
+        self.save(update_fields=["status"])

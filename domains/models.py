@@ -4,9 +4,14 @@
 списки получали его одним запросом; для отдельного объекта есть метод get_status().
 """
 
+from uuid import uuid4
+
 from django.db import models
-from django.db.models import Case, F, Value, When
+from django.db.models import Case, F, Q, Value, When
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.text import slugify
+from unidecode import unidecode
 
 from organizations.models import Organization
 from users.models import User
@@ -39,6 +44,7 @@ class DomainQuerySet(models.QuerySet):
             "id",
             "name",
             "registration_end",
+            "slug",
             "organization_id",
             "status",
             organization_name=F("organization__name"),
@@ -46,8 +52,20 @@ class DomainQuerySet(models.QuerySet):
         )
 
 
+def make_domain_slug(name, pk):
+    """Slug из названия и id домена, точки заменяются дефисами: example.ru, 1 -> example-ru-1."""
+    base_slug = slugify(unidecode(name.replace(".", "-"))) or "domain"
+    return f"{base_slug}-{pk}"
+
+
 class Domain(models.Model):
     name = models.CharField(max_length=255, unique=True, verbose_name="Доменное имя")
+    slug = models.SlugField(
+        max_length=280,
+        unique=True,
+        editable=False,
+        verbose_name="URL-идентификатор",
+    )
     organization = models.ForeignKey(
         Organization,
         on_delete=models.PROTECT,
@@ -60,8 +78,21 @@ class Domain(models.Model):
         related_name="owned_domains",
         verbose_name="Владелец",
     )
-    registration_end = models.DateField(verbose_name="Регистрация действует до")
+    registration_end = models.DateField(
+        verbose_name="Регистрация действует до",
+        help_text="Последний оплаченный день. После этой даты домен считается истёкшим.",
+    )
     is_removed = models.BooleanField(default=False, verbose_name="Исключён из реестра")
+    is_ru_zone = models.GeneratedField(
+        expression=Case(
+            When(Q(name__endswith=".ru") | Q(name__endswith=".рф"), then=Value(True)),
+            default=Value(False),
+            output_field=models.BooleanField(),
+        ),
+        output_field=models.BooleanField(),
+        db_persist=True,
+        verbose_name="Национальная зона (.ru, .рф)",
+    )
 
     objects = DomainQuerySet.as_manager()
 
@@ -72,6 +103,21 @@ class Domain(models.Model):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if self.slug:
+            return super().save(*args, **kwargs)
+        if self.pk:
+            self.slug = make_domain_slug(self.name, self.pk)
+            return super().save(*args, **kwargs)
+        # У нового домена ещё нет id: сохраняем с временным slug, затем дописываем id.
+        self.slug = f"new-{uuid4().hex}"
+        super().save(*args, **kwargs)
+        self.slug = make_domain_slug(self.name, self.pk)
+        super().save(update_fields=["slug"])
+
+    def get_absolute_url(self):
+        return reverse("domains:detail", kwargs={"slug": self.slug})
 
     def get_status(self, today=None):
         """Статус домена на дату: удалён, активен или истёк."""

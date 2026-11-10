@@ -47,7 +47,8 @@ def test_ids_fields_and_links_are_preserved(orm_data):
     for row in source_rows("rentals"):
         rental = Rental.objects.get(pk=row["id"])
         assert (rental.user_id, rental.domain_id) == (row["user_id"], row["domain_id"])
-        assert rental.is_cancelled == bool(row["is_cancelled"])
+        expected = Rental.Status.CANCELLED if row["is_cancelled"] else Rental.Status.ACTIVE
+        assert rental.status == expected
     for row in source_rows("resources"):
         resource = Resource.objects.get(pk=row["id"])
         assert (resource.name, resource.kind, resource.domain_id) == (

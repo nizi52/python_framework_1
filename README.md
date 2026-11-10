@@ -6,13 +6,17 @@
 контроля сроков регистрации. Консольная версия приложения (ПР3) дополнена
 веб-интерфейсом на Django (ПР5), страницы которого с ПР6 формируются
 шаблонами Django. С ПР7 данные хранятся в базе SQLite, а с ПР9 страницы получают
-их через Django ORM: модели, миграции, связи между таблицами.
+их через Django ORM: модели, миграции, связи между таблицами. В ПР10 настроена
+административная панель Django, статус аренды хранится полем с вариантами выбора,
+у страниц доменов появились адреса по slug.
 
 Приложение позволяет:
 * просматривать списки доменов, организаций, ресурсов и аренд в браузере;
 * искать домены по названию, организации и владельцу и сортировать их (ПР9);
-* фильтровать список аренд по дате, домену и арендатору, сортировать его и листать
-  по страницам (ПР9);
+* фильтровать список аренд по статусу (ПР10), дате, домену и арендатору, сортировать
+  его и листать по страницам (ПР9);
+* управлять доменами, арендами, пользователями, организациями и ресурсами в
+  административной панели `/admin/` (ПР10);
 * просматривать информацию о конкретном домене, организации, ресурсе и аренде;
 * проверять статус домена (активен / истёк / удалён) на текущую дату;
 * добавлять пользователей, организации, домены, ресурсы, оформлять и отменять
@@ -28,6 +32,9 @@
 * SQLite – хранение данных; модуль `sqlite3` и SQL-запросы использовались в ПР7,
   с ПР9 доступ к данным в веб-интерфейсе идёт через Django ORM;
 * Django ORM и миграции – модели, связи `ForeignKey`, запросы (ПР9);
+* Django Admin – административная панель (ПР10);
+* Django Debug Toolbar – анализ SQL-запросов при разработке (ПР10);
+* Unidecode – транслитерация названий при формировании slug (ПР10);
 * HTML и шаблоны Django (Django Template Language) – разметка веб-страниц;
 * CSS и Bootstrap 5.3 – оформление страниц;
 * JavaScript – подсветка текущего раздела и быстрый поиск по таблицам;
@@ -96,7 +103,8 @@
 ### Rental – аренда домена
 
 Атрибуты: `id`, `user` – арендатор, `domain` – арендуемый домен, `start_date`
-и `end_date` – срок аренды, `is_cancelled` – признак отмены.
+и `end_date` – срок аренды, `is_cancelled` – признак отмены (в консольной версии и
+JSON; в модели Django с ПР10 вместо него поле `status`).
 Методы: `is_active()` (аренда действует на текущую дату), `cancel()` (отмена с
 сохранением истории), `__str__()`.
 
@@ -106,16 +114,18 @@
 |---|---|---|---|
 | `/` | `homepage:index` | `index()` | `homepage/index.html` |
 | `/domains/?q=...&sort=...` | `domains:list` | `domain_list()` | `domains/domain_list.html` |
-| `/domains/<int:domain_id>/` | `domains:detail` | `domain_detail()` | `domains/domain_detail.html` |
+| `/domains/<slug:slug>/` | `domains:detail` | `domain_detail()` | `domains/domain_detail.html` |
+| `/domains/<int:domain_id>/` | `domains:detail_by_id` | `domain_detail_by_id()` | перенаправление 301 на адрес по slug |
 | `/organizations/` | `organizations:list` | `organization_list()` | `organizations/organization_list.html` |
 | `/organizations/<int:organization_id>/` | `organizations:detail` | `organization_detail()` | `organizations/organization_detail.html` |
 | `/resources/` | `resources:list` | `resource_list()` | `resources/resource_list.html` |
 | `/resources/<int:resource_id>/` | `resources:detail` | `resource_detail()` | `resources/resource_detail.html` |
-| `/rentals/?all=1&date=...&domain=<id>&user=<id>&sort=...&page=N` | `rentals:list` | `rental_list()` | `rentals/rental_list.html` |
+| `/rentals/?status=...&date=...&domain=<id>&user=<id>&sort=...&page=N` | `rentals:list` | `rental_list()` | `rentals/rental_list.html` |
 | `/rentals/<int:rental_id>/` | `rentals:detail` | `rental_detail()` | `rentals/rental_detail.html` |
 | `/domains/available/?date=ГГГГ-ММ-ДД` | `domains:available` | `available_domains()` | `domains/available.html` |
 | `/domains/expiring/?days=N` | `domains:expiring` | `expiring_domains()` | `domains/expiring.html` |
 | `/statistics/` | `homepage:statistics` | `statistics()` | `homepage/statistics.html` |
+| `/admin/` | `admin:index` | Django Admin | шаблоны `django.contrib.admin` |
 
 Если объект с указанным идентификатором не найден, страница возвращает код
 статуса 404 и шаблон `not_found.html`. Для любого адреса, которому не нашлось
@@ -307,7 +317,8 @@ python db/import_sqlite_to_orm.py
 * `/domains/?q=...&sort=...` - `q`: подстрока в названии домена, организации или имени
   владельца без учёта регистра (в том числе для кириллицы); `sort`: `name`, `end`,
   `organization`, `owner` (неизвестное значение заменяется на `name`);
-* `/rentals/?...` - `all=1` (показать и отменённые), `date=ГГГГ-ММ-ДД` (аренды, действующие
+* `/rentals/?...` - `status` (с ПР10: по умолчанию активные, `completed`, `cancelled`, `all`;
+  `all=1` из ПР9 работает как `status=all`), `date=ГГГГ-ММ-ДД` (аренды, действующие
   в этот день), `domain=<id>`, `user=<id>`, `sort=start`, `end`, `domain` или `user`,
   `page=N` (по 5 записей на странице); некорректные значения игнорируются, для даты
   выводится сообщение; ссылки навигации сохраняют фильтры и сортировку
@@ -341,7 +352,7 @@ python db/import_sqlite_to_orm.py
 | 17 | `aggregate` | `Domain.objects.aggregate(Count, Min(filter=...), Max)` | `statistics`, `index` |
 | 18 | `aggregate` | `Rental.objects.not_cancelled().aggregate(Avg(F("end_date") - F("start_date")))` | `statistics` |
 | 19 | `annotate` | `Organization.objects.annotate(domains_count=Count("domains"))` (организации без доменов не пропадают) | `organization_list`, `statistics` |
-| 20 | `annotate` с условием | `Count("rentals", filter=Q(rentals__is_cancelled=False))` | `statistics` |
+| 20 | `annotate` с условием | `Count("rentals", filter=Q(rentals__status=Rental.Status.ACTIVE))` | `statistics` |
 | 21 | группировка | `Resource.objects.values("kind").annotate(Count("id"))` | `statistics` |
 | 22 | фильтр групп | `annotate(resources_count=Count("resources")).filter(resources_count__gte=n)` | `statistics` |
 | 23 | `values` с выражениями | `values(..., organization_name=F("organization__name"))` | `as_rows()` |
@@ -351,6 +362,69 @@ python db/import_sqlite_to_orm.py
 Прямых SQL-запросов в `views.py` больше нет (это проверяет тест). Файл
 `sql/queries.sql` и пакет `db/` сохранены как материалы ПР7 и источник данных для
 переноса.
+
+## Административная панель и ORM (ПР10)
+
+Пример Roomly из методички перенесён на предметную область так: помещение (Room) –
+домен (`Domain`), бронирование (Booking) – аренда (`Rental`), пользователь – `User`.
+
+### Django Admin
+
+Адрес `/admin/`. Вход под суперпользователем Django (`python manage.py createsuperuser`).
+Названия приложений русские (`verbose_name` в `apps.py`), у моделей и полей –
+`verbose_name`.
+
+| Модель | Настройки |
+|---|---|
+| `Domain` | столбцы с организацией, владельцем, датой, признаками и числом активных аренд (`annotate`); поиск по названию, организации, владельцу; фильтры по исключению, зоне, организации; `list_editable` для даты окончания; `readonly_fields` (`id`, `slug`, `is_ru_zone`); `autocomplete_fields`; `list_select_related`; встроенные формы ресурсов и аренд; ссылки «Смотреть на сайте» и «Страница на сайте» (`get_absolute_url()`) |
+| `Rental` | поиск по домену, арендатору и его почте; фильтры по статусу и дате начала; `date_hierarchy`; `autocomplete_fields`; `list_select_related`; действия «Отменить выбранные аренды» и «Вернуть в активные» |
+| `User` | поиск по имени и почте, аренды пользователя во встроенной форме |
+| `Organization`, `Resource` | столбцы, поиск, сортировка, у ресурсов фильтр по типу |
+
+Админ-панель не проверяет бизнес-правила: при создании аренды или возврате её в
+активные пересечение с другими арендами домена не проверяется.
+
+### Статус аренды (TextChoices)
+
+Булево поле `Rental.is_cancelled` заменено полем `status`: `active` (активна),
+`cancelled` (отменена), `completed` (завершена). Миграции `rentals`: `0002` добавляет
+поле, `0003` переносит данные (отменённые – `cancelled`, остальные – `active`), `0004`
+удаляет `is_cancelled`. Статус `completed` по прошедшей дате автоматически не ставится,
+его задаёт администратор.
+
+Методы `RentalQuerySet`: `active()`, `cancelled()`, `completed()`, `not_cancelled()`,
+`for_date(day)`, `active_on(day)` (только активные аренды на дату: они и блокируют домен),
+`with_state()` – состояние на дату для страниц (запланирована, действует, завершена,
+отменена).
+
+### Slug, get_absolute_url и GeneratedField у домена
+
+* `slug` – из названия домена и id: точки заменяются дефисами, кириллица
+  транслитерируется (`example.ru`, id 1 → `example-ru-1`). Миграции `domains`: `0002`
+  добавляет поле, `0003` заполняет его, `0004` делает уникальным. Новому домену slug
+  задаётся в `save()` и при переименовании не меняется;
+* `get_absolute_url()` – адрес `/domains/<slug>/`, используется в шаблонах и админке;
+  старые адреса `/domains/<id>/` перенаправляют на новые;
+* `is_ru_zone` – `GeneratedField` (миграция `0005`): домен в зоне `.ru` или `.рф`,
+  значение вычисляет SQLite и хранит в таблице.
+
+### Контекстный процессор
+
+`homepage/context_processors.py` – `registry_context()` передаёт во все шаблоны
+`app_title` и `registry_domains_count` (число доменов в реестре, выводится в подвале).
+Запрос подсчёта выполняется только там, где значение выводится.
+
+### Django Debug Toolbar
+
+Подключается в `settings.py` и `urls.py` только при `DEBUG = True` и не подключается при
+запуске тестов (`ENABLE_DEBUG_TOOLBAR`). Панель видна на страницах при открытии сайта с
+`127.0.0.1` (`INTERNAL_IPS`). Результаты проверки:
+
+| Страница | SQL-запросов | Что выполняется |
+|---|---|---|
+| `/rentals/` | 5 | подсчёт для пагинации, домены и арендаторы для фильтров, аренды одной выборкой с `JOIN` (`values()` и `F()`), число доменов в подвале |
+| `/rentals/<id>/` | 2 | аренда с доменом и арендатором (`select_related`), число доменов в подвале |
+| `/domains/<slug>/` | 4 | домен с организацией и владельцем, ресурсы, аренды с арендаторами, число доменов |
 
 ### Поиск по кириллице
 
@@ -401,6 +475,7 @@ domain_registry/
 │   ├── migrations/
 │   ├── models.py
 │   ├── search.py        (lookup uicontains для кириллицы)
+│   ├── context_processors.py  (общие данные шаблонов, ПР10)
 │   ├── tests.py
 │   ├── urls.py
 │   └── views.py
@@ -469,6 +544,7 @@ domain_registry/
     ├── test_views.py
     ├── test_models.py
     ├── test_import.py
+    ├── test_pr10.py
     ├── test_domains.py
     ├── test_users.py
     ├── test_organizations.py
@@ -545,7 +621,8 @@ email), `admin.py`, `migrations/`. Это не встроенная модель
 Автоматизированные тесты pytest: сущности `Domain`, `User`, `Organization`, `Resource`,
 `Rental`, база данных (`test_database.py`: таблицы, внешние ключи, перенос данных, файл
 запросов), модели Django (`test_models.py`: связи, ограничения, `PROTECT`, CRUD, методы),
-перенос данных (`test_import.py`) и веб-страницы (`test_views.py`: шаблоны, данные из ORM,
+перенос данных (`test_import.py`), ПР10 (`test_pr10.py`: статусы аренд, slug, вычисляемое
+поле, контекстный процессор, админ-панель) и веб-страницы (`test_views.py`: шаблоны, данные из ORM,
 поиск, фильтры, сортировка, пагинация, статистика, 404). `conftest.py` создаёт временную
 исходную базу SQLite, а pytest-django отдельную тестовую базу Django; рабочие
 `data/domainreg.sqlite` и `db.sqlite3` не изменяются.
@@ -561,9 +638,10 @@ pip install -r requirements.txt
 ```text
 python manage.py migrate
 python db/import_sqlite_to_orm.py
+python manage.py createsuperuser
 python manage.py runserver
 ```
-`migrate` создаёт таблицы в `db.sqlite3`, `import_sqlite_to_orm.py` переносит в них
+`createsuperuser` нужен для входа в админ-панель `/admin/`. `migrate` создаёт таблицы в `db.sqlite3`, `import_sqlite_to_orm.py` переносит в них
 данные из исходной базы `data/domainreg.sqlite`. Если исходную базу нужно пересоздать
 из JSON (например, после правки файлов в `data/`), сначала выполняется
 `python -m db.import_json`.
@@ -601,6 +679,8 @@ black .
 
 Состав зависимостей в `requirements.txt`:
 * `Django==5.2.*` – веб-фреймворк;
+* `django-debug-toolbar` – панель отладки SQL-запросов (ПР10);
+* `Unidecode` – транслитерация для slug (ПР10, нужна и для миграций);
 * `pytest` и `pytest-django` – автоматизированные тесты;
 * `flake8` – проверка качества кода;
 * `black` – форматирование кода.
@@ -608,7 +688,7 @@ black .
 ## Git
 
 Исходный код проекта хранится в Git-репозитории. Коммиты начинаются с
-метки текущей работы: `PR5:`, `PR6:`, `PR7:`, `PR9:`. Проверка состояния репозитория:
+метки текущей работы: `PR5:`, `PR6:`, `PR7:`, `PR9:`, `PR10:`. Проверка состояния репозитория:
 ```text
 git status
 ```
@@ -656,6 +736,15 @@ git status
 * статистика через `aggregate()` и `annotate()`;
 * регистронезависимый поиск по кириллице (lookup `uicontains`);
 * тесты моделей, переноса данных и страниц (pytest-django).
+
+Реализовано (ПР10):
+* административная панель для всех моделей: столбцы, поиск, фильтры, сортировка,
+  встроенные формы, массовые действия, русские названия;
+* статус аренды через `TextChoices` с миграцией данных, методы `QuerySet` по статусу и дате;
+* `slug`, `get_absolute_url()` и `GeneratedField` у домена;
+* контекстный процессор, Django Debug Toolbar, проверка числа SQL-запросов;
+* статистика аренд по статусам, фильтр списка аренд по статусу;
+* тесты ПР10 (`tests/test_pr10.py`).
 
 Планируется:
 * формы создания и редактирования доменов;

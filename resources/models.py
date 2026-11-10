@@ -28,7 +28,13 @@ class ResourceQuerySet(models.QuerySet):
 
     def as_rows(self, today=None):
         return self.with_status(today).values(
-            "id", "name", "kind", "domain_id", "status", domain_name=F("domain__name")
+            "id",
+            "name",
+            "kind",
+            "domain_id",
+            "status",
+            domain_name=F("domain__name"),
+            domain_slug=F("domain__slug"),
         )
 
 

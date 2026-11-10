@@ -114,15 +114,16 @@ def test_domain_renew_and_remove():
     assert Domain.objects.get(pk=1).is_removed  # запись сохраняется, история не теряется
 
 
-def test_rental_cancel_and_status():
+def test_rental_cancel_and_state():
     rental = Rental.objects.get(pk=4)  # 2026-09-01 – 2026-11-30
     assert rental.duration_days == 90
-    assert Rental.objects.with_status(date(2026, 8, 1)).get(pk=4).status == "запланирована"
-    assert Rental.objects.with_status(date(2026, 10, 1)).get(pk=4).status == "действует"
-    assert Rental.objects.with_status(date(2027, 1, 1)).get(pk=4).status == "завершена"
+    assert Rental.objects.with_state(date(2026, 8, 1)).get(pk=4).state == "запланирована"
+    assert Rental.objects.with_state(date(2026, 10, 1)).get(pk=4).state == "действует"
+    assert Rental.objects.with_state(date(2027, 1, 1)).get(pk=4).state == "завершена"
 
     rental.cancel()
-    assert Rental.objects.with_status(date(2026, 10, 1)).get(pk=4).status == "отменена"
+    assert Rental.objects.get(pk=4).status == Rental.Status.CANCELLED
+    assert Rental.objects.with_state(date(2026, 10, 1)).get(pk=4).state == "отменена"
     assert not Rental.objects.active_on(date(2026, 10, 1)).filter(pk=4).exists()
 
 

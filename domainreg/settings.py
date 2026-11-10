@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
+import sys
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -26,6 +28,10 @@ SECRET_KEY = "django-insecure-ci%=xbdqxgnew8u$t%n1yw81k0_omxy*@029$u&!3srpm5&30l
 DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1", "testserver"]
+
+# Debug Toolbar нужен только при локальной разработке и не подключается при запуске тестов.
+TESTING = "test" in sys.argv or "PYTEST_VERSION" in os.environ
+ENABLE_DEBUG_TOOLBAR = DEBUG and not TESTING
 
 
 # Application definition
@@ -45,6 +51,9 @@ INSTALLED_APPS = [
     "rentals",
 ]
 
+if ENABLE_DEBUG_TOOLBAR:
+    INSTALLED_APPS.append("debug_toolbar")
+
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -54,6 +63,10 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
+
+if ENABLE_DEBUG_TOOLBAR:
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
+    INTERNAL_IPS = ["127.0.0.1"]
 
 ROOT_URLCONF = "domainreg.urls"
 
@@ -67,6 +80,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "homepage.context_processors.registry_context",
             ],
         },
     },

@@ -35,9 +35,14 @@
                 <option value="user" {% if sort == "user" %}selected{% endif %}>Арендатору</option>
             </select>
         </div>
-        <div class="col-auto form-check">
-            <input type="checkbox" id="all" name="all" value="1" class="form-check-input" {% if show_all %}checked{% endif %}>
-            <label for="all" class="form-check-label">Показать и отменённые</label>
+        <div class="col-auto">
+            <label for="status" class="form-label">Статус</label>
+            <select id="status" name="status" class="form-select">
+                <option value="" {% if not status %}selected{% endif %}>Активные</option>
+                <option value="completed" {% if status == "completed" %}selected{% endif %}>Завершённые</option>
+                <option value="cancelled" {% if status == "cancelled" %}selected{% endif %}>Отменённые</option>
+                <option value="all" {% if status == "all" %}selected{% endif %}>Все</option>
+            </select>
         </div>
         <div class="col-auto">
             <button type="submit" class="btn btn-primary">Найти</button>
@@ -63,11 +68,11 @@
                     {% for row in rows %}
                         <tr>
                             <td><a href="{% url 'rentals:detail' row.id %}">№{{ row.id }}</a></td>
-                            <td><a href="{% url 'domains:detail' row.domain_id %}">{{ row.domain_name }}</a></td>
+                            <td><a href="{% url 'domains:detail' row.domain_slug %}">{{ row.domain_name }}</a></td>
                             <td>{{ row.user_name }}</td>
                             <td>{{ row.start_date|date:"d.m.Y" }}</td>
                             <td>{{ row.end_date|date:"d.m.Y" }}</td>
-                            <td>{% include "includes/badge.html" with status=row.status %}</td>
+                            <td>{% include "includes/badge.html" with status=row.state %}</td>
                         </tr>
                     {% endfor %}
                 </tbody>

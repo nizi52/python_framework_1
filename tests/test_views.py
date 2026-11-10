@@ -42,8 +42,8 @@ def test_list_pages_render_from_orm(client):
 
 
 def test_detail_pages_and_named_urls(client):
-    assert reverse("domains:detail", args=[1]) == "/domains/1/"
-    response = client.get(reverse("domains:detail", args=[1]))
+    assert Domain.objects.get(pk=1).get_absolute_url() == "/domains/example-ru-1/"
+    response = client.get(reverse("domains:detail", args=["example-ru-1"]))
     assert response.status_code == 200
     domain = response.context["domain"]
     assert domain.name == "example.ru"
@@ -269,13 +269,15 @@ def test_views_do_not_use_raw_sql():
         assert ".execute(" not in text and ".raw(" not in text, app
 
 
-def test_organization_list_uses_two_queries(client, django_assert_num_queries):
-    # организации с числом доменов и prefetch_related("domains"), без запроса на каждую строку
-    with django_assert_num_queries(2):
+def test_organization_list_uses_three_queries(client, django_assert_num_queries):
+    # организации с числом доменов и prefetch_related("domains"), без запроса на каждую строку;
+    # третий запрос: число доменов в подвале (контекстный процессор, ПР10)
+    with django_assert_num_queries(3):
         client.get(reverse("organizations:list"))
 
 
-def test_domain_detail_uses_three_queries(client, django_assert_num_queries):
-    # домен с организацией и владельцем (select_related), ресурсы, аренды с арендаторами
-    with django_assert_num_queries(3):
-        client.get(reverse("domains:detail", args=[1]))
+def test_domain_detail_uses_four_queries(client, django_assert_num_queries):
+    # домен с организацией и владельцем (select_related), ресурсы, аренды с арендаторами,
+    # число доменов в подвале (контекстный процессор)
+    with django_assert_num_queries(4):
+        client.get(reverse("domains:detail", args=["example-ru-1"]))

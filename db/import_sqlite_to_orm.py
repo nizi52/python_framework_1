@@ -88,7 +88,9 @@ def import_from_sqlite(source_db: Path = DB_PATH) -> dict:
                     "domain_id": row["domain_id"],
                     "start_date": date.fromisoformat(row["start_date"]),
                     "end_date": date.fromisoformat(row["end_date"]),
-                    "is_cancelled": bool(row["is_cancelled"]),
+                    "status": (
+                        Rental.Status.CANCELLED if row["is_cancelled"] else Rental.Status.ACTIVE
+                    ),
                 },
             )
 

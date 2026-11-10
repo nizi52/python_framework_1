@@ -38,7 +38,7 @@ def index(request):
     )
     counts["organizations"] = Organization.objects.count()
     counts["resources"] = Resource.objects.count()
-    counts["rentals"] = Rental.objects.not_cancelled().count()
+    counts["rentals"] = Rental.objects.active().count()
     sections = [
         {"title": "Домены", "url": "domains:list", "count": counts["domains"]},
         {"title": "Организации", "url": "organizations:list", "count": counts["organizations"]},
@@ -64,16 +64,22 @@ def statistics(request):
         avg=Avg(ExpressionWrapper(F("end_date") - F("start_date"), output_field=DurationField()))
     )["avg"]
     avg_rental = {"avg_days": round(avg_duration / timedelta(days=1), 1) if avg_duration else None}
+    rentals_by_status = Rental.objects.aggregate(
+        total=Count("id"),
+        active=Count("id", filter=Q(status=Rental.Status.ACTIVE)),
+        cancelled=Count("id", filter=Q(status=Rental.Status.CANCELLED)),
+        completed=Count("id", filter=Q(status=Rental.Status.COMPLETED)),
+    )
 
     by_organization = Organization.objects.annotate(domains_count=Count("domains")).order_by(
         "-domains_count", "name"
     )
     rentals_by_domain = (
         Domain.objects.annotate(
-            rentals_count=Count("rentals", filter=Q(rentals__is_cancelled=False))
+            rentals_count=Count("rentals", filter=Q(rentals__status=Rental.Status.ACTIVE))
         )
         .order_by("-rentals_count", "name")
-        .values("id", "name", "rentals_count")
+        .values("id", "name", "slug", "rentals_count")
     )
     resources_by_kind = (
         Resource.objects.order_by()
@@ -89,12 +95,13 @@ def statistics(request):
         Domain.objects.annotate(resources_count=Count("resources"))
         .filter(resources_count__gte=min_resources)
         .order_by("-resources_count", "name")
-        .values("id", "name", "resources_count")
+        .values("id", "name", "slug", "resources_count")
     )
     context = {
         "title": "Статистика реестра",
         "summary": summary,
         "avg_rental": avg_rental,
+        "rentals_by_status": rentals_by_status,
         "by_organization": by_organization,
         "rentals_by_domain": rentals_by_domain,
         "resources_by_kind": resources_by_kind,
