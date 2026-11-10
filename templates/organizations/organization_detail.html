@@ -10,7 +10,7 @@
                 {% for domain in domains %}
                     <li>
                         <a href="{% url 'domains:detail' domain.id %}">{{ domain.name }}</a>
-                        – до {{ domain.registration_end_display }}
+                        – до {{ domain.registration_end|date:"d.m.Y" }}
                         {% include "includes/badge.html" with status=domain.status %}
                     </li>
                 {% empty %}

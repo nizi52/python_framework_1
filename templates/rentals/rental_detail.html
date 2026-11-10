@@ -6,13 +6,13 @@
             <h5 class="card-title">Аренда №{{ rental.id }}</h5>
             <p class="card-text">
                 <strong>Домен:</strong>
-                <a href="{% url 'domains:detail' rental.domain_id %}">{{ rental.domain_name }}</a>
+                <a href="{% url 'domains:detail' rental.domain_id %}">{{ rental.domain.name }}</a>
             </p>
             <p class="card-text">
-                <strong>Арендатор:</strong> {{ rental.user_name }} ({{ rental.user_email|lower }})
+                <strong>Арендатор:</strong> {{ rental.user.name }} ({{ rental.user.email|lower }})
             </p>
             <p class="card-text">
-                <strong>Период:</strong> {{ rental.start_display }} – {{ rental.end_display }}
+                <strong>Период:</strong> {{ rental.start_date|date:"d.m.Y" }} – {{ rental.end_date|date:"d.m.Y" }}
                 ({{ rental.duration_days }} дн.)
             </p>
             <p class="card-text">Статус: {% include "includes/badge.html" with status=rental.status %}</p>

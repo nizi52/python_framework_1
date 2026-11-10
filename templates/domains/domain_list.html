@@ -3,10 +3,32 @@
 {% block content %}
     <h1>Домены</h1>
     {% include "includes/domain_actions.html" %}
+
+    <form method="get" class="d-flex flex-wrap align-items-end gap-2 mb-3">
+        <div>
+            <label for="q" class="form-label">Поиск</label>
+            <input type="search" id="q" name="q" class="form-control table-filter" value="{{ query }}"
+                   placeholder="Домен, организация или владелец">
+        </div>
+        <div>
+            <label for="sort" class="form-label">Сортировать по</label>
+            <select id="sort" name="sort" class="form-select">
+                <option value="name" {% if sort == "name" %}selected{% endif %}>Названию</option>
+                <option value="end" {% if sort == "end" %}selected{% endif %}>Сроку регистрации</option>
+                <option value="organization" {% if sort == "organization" %}selected{% endif %}>Организации</option>
+                <option value="owner" {% if sort == "owner" %}selected{% endif %}>Владельцу</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Найти</button>
+        <a href="{% url 'domains:list' %}" class="btn btn-outline-light">Сбросить</a>
+    </form>
+
     {% if rows %}
-        {% include "includes/table_filter.html" with target="#domains-table" placeholder="Поиск по домену, организации, владельцу" %}
+        {% include "includes/table_filter.html" with target="#domains-table" placeholder="Быстрый фильтр по таблице" %}
         {% include "includes/domain_table.html" %}
-        <p class="text-muted">Всего доменов: {{ rows|length }}</p>
+        <p class="text-muted">Найдено доменов: {{ rows|length }}</p>
+    {% elif query %}
+        <p class="text-muted">По запросу «{{ query }}» доменов не найдено.</p>
     {% else %}
         <p class="text-muted">Реестр доменов пуст.</p>
     {% endif %}

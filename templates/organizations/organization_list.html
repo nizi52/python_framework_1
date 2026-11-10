@@ -14,7 +14,7 @@
                         <tr>
                             <td><a href="{% url 'organizations:detail' row.id %}">{{ row.name }}</a></td>
                             <td>{{ row.domains_count }}</td>
-                            <td>{{ row.domain_names|default:"—" }}</td>
+                            <td>{% for domain in row.domains.all %}{{ domain.name }}{% if not forloop.last %}, {% endif %}{% empty %}—{% endfor %}</td>
                         </tr>
                     {% endfor %}
                 </tbody>

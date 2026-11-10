@@ -16,7 +16,7 @@
                     <td><a href="{% url 'domains:detail' row.id %}">{{ row.name|lower }}</a></td>
                     <td><a href="{% url 'organizations:detail' row.organization_id %}">{{ row.organization_name }}</a></td>
                     <td>{{ row.owner_name }}</td>
-                    <td>{{ row.registration_end_display }}</td>
+                    <td>{{ row.registration_end|date:"d.m.Y" }}</td>
                     {% if show_days %}<td>{{ row.days_left }}</td>{% endif %}
                     <td>{% include "includes/badge.html" with status=row.status %}</td>
                 </tr>

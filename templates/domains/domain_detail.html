@@ -7,13 +7,13 @@
             <p class="card-text"><strong>ID:</strong> {{ domain.id }}</p>
             <p class="card-text">
                 <strong>Организация:</strong>
-                <a href="{% url 'organizations:detail' domain.organization_id %}">{{ domain.organization_name }}</a>
+                <a href="{% url 'organizations:detail' domain.organization_id %}">{{ domain.organization.name }}</a>
             </p>
             <p class="card-text">
-                <strong>Владелец:</strong> {{ domain.owner_name }} ({{ domain.owner_email|lower }})
+                <strong>Владелец:</strong> {{ domain.owner.name }} ({{ domain.owner.email|lower }})
             </p>
             <p class="card-text">
-                <strong>Срок регистрации до:</strong> {{ domain.registration_end_display }}
+                <strong>Срок регистрации до:</strong> {{ domain.registration_end|date:"d.m.Y" }}
             </p>
             <p class="card-text">
                 Статус на текущую дату: {% include "includes/badge.html" with status=domain.status %}
@@ -33,7 +33,7 @@
                 {% for rental in rentals %}
                     <li>
                         <a href="{% url 'rentals:detail' rental.id %}">Аренда №{{ rental.id }}</a>:
-                        {{ rental.user_name }}, {{ rental.start_display }} – {{ rental.end_display }}
+                        {{ rental.user.name }}, {{ rental.start_date|date:"d.m.Y" }} – {{ rental.end_date|date:"d.m.Y" }}
                         {% include "includes/badge.html" with status=rental.status %}
                     </li>
                 {% empty %}

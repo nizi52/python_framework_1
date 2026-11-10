@@ -2,15 +2,55 @@
 
 {% block content %}
     <h1>Аренда доменов</h1>
-    <div class="d-flex flex-wrap gap-2 mb-3">
-        {% if show_all %}
-            <a class="btn btn-outline-light btn-sm" href="{% url 'rentals:list' %}">Только неотменённые</a>
-        {% else %}
-            <a class="btn btn-outline-light btn-sm" href="{% url 'rentals:list' %}?all=1">Показать и отменённые</a>
-        {% endif %}
-    </div>
+
+    <form method="get" class="row g-2 align-items-end mb-3">
+        <div class="col-auto">
+            <label for="date" class="form-label">Действует на дату</label>
+            <input type="date" id="date" name="date" class="form-control table-filter" value="{{ raw_date }}">
+        </div>
+        <div class="col-auto">
+            <label for="domain" class="form-label">Домен</label>
+            <select id="domain" name="domain" class="form-select">
+                <option value="">Все домены</option>
+                {% for domain in domains %}
+                    <option value="{{ domain.pk }}" {% if selected_domain == domain.pk|stringformat:"s" %}selected{% endif %}>{{ domain.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <label for="user" class="form-label">Арендатор</label>
+            <select id="user" name="user" class="form-select">
+                <option value="">Все арендаторы</option>
+                {% for user in users %}
+                    <option value="{{ user.pk }}" {% if selected_user == user.pk|stringformat:"s" %}selected{% endif %}>{{ user.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <label for="sort" class="form-label">Сортировать по</label>
+            <select id="sort" name="sort" class="form-select">
+                <option value="start" {% if sort == "start" %}selected{% endif %}>Началу</option>
+                <option value="end" {% if sort == "end" %}selected{% endif %}>Окончанию</option>
+                <option value="domain" {% if sort == "domain" %}selected{% endif %}>Домену</option>
+                <option value="user" {% if sort == "user" %}selected{% endif %}>Арендатору</option>
+            </select>
+        </div>
+        <div class="col-auto form-check">
+            <input type="checkbox" id="all" name="all" value="1" class="form-check-input" {% if show_all %}checked{% endif %}>
+            <label for="all" class="form-check-label">Показать и отменённые</label>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-primary">Найти</button>
+            <a href="{% url 'rentals:list' %}" class="btn btn-outline-light">Сбросить</a>
+        </div>
+    </form>
+
+    {% if error %}
+        <p class="text-warning">{{ error }}</p>
+    {% endif %}
+
     {% if rows %}
-        {% include "includes/table_filter.html" with target="#rentals-table" placeholder="Поиск по домену, арендатору, статусу" %}
+        {% include "includes/table_filter.html" with target="#rentals-table" placeholder="Поиск по домену, арендатору, статусу на странице" %}
         <div class="table-responsive">
             <table class="table table-hover table-dark" id="rentals-table">
                 <thead>
@@ -25,15 +65,40 @@
                             <td><a href="{% url 'rentals:detail' row.id %}">№{{ row.id }}</a></td>
                             <td><a href="{% url 'domains:detail' row.domain_id %}">{{ row.domain_name }}</a></td>
                             <td>{{ row.user_name }}</td>
-                            <td>{{ row.start_display }}</td>
-                            <td>{{ row.end_display }}</td>
+                            <td>{{ row.start_date|date:"d.m.Y" }}</td>
+                            <td>{{ row.end_date|date:"d.m.Y" }}</td>
                             <td>{% include "includes/badge.html" with status=row.status %}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+        <p class="text-muted">Всего по условиям: {{ page_obj.paginator.count }}</p>
     {% else %}
-        <p class="text-muted">Аренд пока нет.</p>
+        <p class="text-muted">Аренд, подходящих под условия, нет.</p>
+    {% endif %}
+
+    {% if page_obj.paginator.num_pages > 1 %}
+        <nav aria-label="Навигация по страницам">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="{% querystring page=page_obj.previous_page_number %}">Назад</a></li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Назад</span></li>
+                {% endif %}
+                {% for page_number in page_obj.paginator.page_range %}
+                    {% if page_number == page_obj.number %}
+                        <li class="page-item active" aria-current="page"><span class="page-link">{{ page_number }}</span></li>
+                    {% else %}
+                        <li class="page-item"><a class="page-link" href="{% querystring page=page_number %}">{{ page_number }}</a></li>
+                    {% endif %}
+                {% endfor %}
+                {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="{% querystring page=page_obj.next_page_number %}">Далее</a></li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">Далее</span></li>
+                {% endif %}
+            </ul>
+        </nav>
     {% endif %}
 {% endblock %}

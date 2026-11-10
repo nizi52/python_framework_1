@@ -21,3 +21,14 @@ from db import import_json  # noqa: E402
 if TEST_DB.exists():
     TEST_DB.unlink()
 import_json.main()
+
+
+import pytest  # noqa: E402
+
+
+@pytest.fixture
+def orm_data(db):
+    """Заполнить тестовую базу Django данными из временной исходной базы SQLite."""
+    from db.import_sqlite_to_orm import import_from_sqlite
+
+    return import_from_sqlite(TEST_DB)

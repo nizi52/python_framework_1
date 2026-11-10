@@ -29,7 +29,7 @@
                 <thead><tr><th>Организация</th><th>Доменов</th></tr></thead>
                 <tbody>
                     {% for item in by_organization %}
-                        <tr><td>{{ item.organization_name }}</td><td>{{ item.domains_count }}</td></tr>
+                        <tr><td>{{ item.name }}</td><td>{{ item.domains_count }}</td></tr>
                     {% empty %}
                         <tr><td colspan="2">Данные отсутствуют.</td></tr>
                     {% endfor %}
@@ -43,7 +43,7 @@
                 <tbody>
                     {% for item in rentals_by_domain %}
                         <tr>
-                            <td><a href="{% url 'domains:detail' item.domain_id %}">{{ item.domain_name }}</a></td>
+                            <td><a href="{% url 'domains:detail' item.id %}">{{ item.name }}</a></td>
                             <td>{{ item.rentals_count }}</td>
                         </tr>
                     {% empty %}
@@ -77,7 +77,7 @@
                 <tbody>
                     {% for item in rich_domains %}
                         <tr>
-                            <td><a href="{% url 'domains:detail' item.domain_id %}">{{ item.domain_name }}</a></td>
+                            <td><a href="{% url 'domains:detail' item.id %}">{{ item.name }}</a></td>
                             <td>{{ item.resources_count }}</td>
                         </tr>
                     {% empty %}

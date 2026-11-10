@@ -1,13 +1,20 @@
 """Представления приложения homepage: главная, статистика и страницы 404.
 
-С ПР7 веб-страницы получают данные из базы SQLite (пакет db/). Загрузка JSON
-средствами ПР3 (load_data) сохранена для консольной версии и тестов.
+С ПР9 веб-страницы получают данные через Django ORM (модели приложений проекта).
+Загрузка JSON средствами ПР3 (load_data) сохранена для консольной версии.
 """
 
-from django.conf import settings
-from django.shortcuts import render
+from datetime import timedelta
 
-from db.database import fetch_all, fetch_one
+from django.conf import settings
+from django.db.models import Avg, Count, ExpressionWrapper, F, DurationField, Max, Min, Q
+from django.shortcuts import render
+from django.utils import timezone
+
+from domains.models import Domain
+from organizations.models import Organization
+from rentals.models import Rental
+from resources.models import Resource
 from storage import Registry, load_registry
 
 
@@ -24,18 +31,14 @@ def not_found(request, title: str, back_url: str, back_text: str):
 
 def index(request):
     """Главная страница: описание приложения, разделы и сводка из базы данных."""
-    counts = fetch_one(
-        """
-        SELECT
-            (SELECT COUNT(*) FROM domains) AS domains,
-            (SELECT COUNT(*) FROM domains
-              WHERE is_removed = 0 AND registration_end >= date('now', 'localtime'))
-              AS active_domains,
-            (SELECT COUNT(*) FROM organizations) AS organizations,
-            (SELECT COUNT(*) FROM resources) AS resources,
-            (SELECT COUNT(*) FROM rentals WHERE is_cancelled = 0) AS rentals
-        """
+    today = timezone.localdate()
+    counts = Domain.objects.aggregate(
+        domains=Count("id"),
+        active_domains=Count("id", filter=Q(is_removed=False, registration_end__gte=today)),
     )
+    counts["organizations"] = Organization.objects.count()
+    counts["resources"] = Resource.objects.count()
+    counts["rentals"] = Rental.objects.not_cancelled().count()
     sections = [
         {"title": "Домены", "url": "domains:list", "count": counts["domains"]},
         {"title": "Организации", "url": "organizations:list", "count": counts["organizations"]},
@@ -47,73 +50,46 @@ def index(request):
 
 
 def statistics(request):
-    """Страница /statistics/: показатели реестра (агрегатные функции, GROUP BY, HAVING)."""
-    summary = fetch_one(
-        """
-        SELECT COUNT(*) AS domains_total,
-               SUM(CASE WHEN is_removed = 0
-                         AND registration_end >= date('now', 'localtime') THEN 1 ELSE 0 END)
-                   AS domains_active,
-               MIN(CASE WHEN is_removed = 0
-                         AND registration_end >= date('now', 'localtime')
-                        THEN registration_end END) AS nearest_end,
-               MAX(registration_end) AS latest_end
-        FROM domains
-        """
+    """Страница /statistics/: показатели реестра (aggregate, annotate, values, фильтр групп)."""
+    today = timezone.localdate()
+    in_force = Q(is_removed=False, registration_end__gte=today)
+    summary = Domain.objects.aggregate(
+        domains_total=Count("id"),
+        domains_active=Count("id", filter=in_force),
+        nearest_end=Min("registration_end", filter=in_force),
+        latest_end=Max("registration_end"),
     )
-    avg_rental = fetch_one(
-        """
-        SELECT ROUND(AVG(julianday(end_date) - julianday(start_date)), 1) AS avg_days
-        FROM rentals
-        WHERE is_cancelled = 0
-        """
+
+    avg_duration = Rental.objects.not_cancelled().aggregate(
+        avg=Avg(ExpressionWrapper(F("end_date") - F("start_date"), output_field=DurationField()))
+    )["avg"]
+    avg_rental = {"avg_days": round(avg_duration / timedelta(days=1), 1) if avg_duration else None}
+
+    by_organization = Organization.objects.annotate(domains_count=Count("domains")).order_by(
+        "-domains_count", "name"
     )
-    by_organization = fetch_all(
-        """
-        SELECT organizations.name AS organization_name,
-               COUNT(domains.id) AS domains_count
-        FROM organizations
-        LEFT JOIN domains ON domains.organization_id = organizations.id
-        GROUP BY organizations.id, organizations.name
-        ORDER BY domains_count DESC, organizations.name
-        """
+    rentals_by_domain = (
+        Domain.objects.annotate(
+            rentals_count=Count("rentals", filter=Q(rentals__is_cancelled=False))
+        )
+        .order_by("-rentals_count", "name")
+        .values("id", "name", "rentals_count")
     )
-    rentals_by_domain = fetch_all(
-        """
-        SELECT domains.id AS domain_id,
-               domains.name AS domain_name,
-               COUNT(rentals.id) AS rentals_count
-        FROM domains
-        LEFT JOIN rentals ON rentals.domain_id = domains.id
-                         AND rentals.is_cancelled = 0
-        GROUP BY domains.id, domains.name
-        ORDER BY rentals_count DESC, domains.name
-        """
-    )
-    resources_by_kind = fetch_all(
-        """
-        SELECT kind, COUNT(*) AS resources_count
-        FROM resources
-        GROUP BY kind
-        ORDER BY resources_count DESC, kind
-        """
+    resources_by_kind = (
+        Resource.objects.order_by()
+        .values("kind")
+        .annotate(resources_count=Count("id"))
+        .order_by("-resources_count", "kind")
     )
     try:
         min_resources = max(1, int(request.GET.get("min_resources", 2)))
     except ValueError:
         min_resources = 2
-    rich_domains = fetch_all(
-        """
-        SELECT domains.id AS domain_id,
-               domains.name AS domain_name,
-               COUNT(resources.id) AS resources_count
-        FROM domains
-        JOIN resources ON resources.domain_id = domains.id
-        GROUP BY domains.id, domains.name
-        HAVING COUNT(resources.id) >= ?
-        ORDER BY resources_count DESC
-        """,
-        [min_resources],
+    rich_domains = (
+        Domain.objects.annotate(resources_count=Count("resources"))
+        .filter(resources_count__gte=min_resources)
+        .order_by("-resources_count", "name")
+        .values("id", "name", "resources_count")
     )
     context = {
         "title": "Статистика реестра",
