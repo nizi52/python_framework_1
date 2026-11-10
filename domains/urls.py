@@ -13,4 +13,5 @@ urlpatterns = [
     # Старые адреса по id перенаправляют на адрес по slug.
     path("<int:domain_id>/", views.domain_detail_by_id, name="detail_by_id"),
     path("<slug:slug>/", views.domain_detail, name="detail"),
+    path("<slug:slug>/screenshot/", views.domain_screenshot, name="screenshot"),
 ]

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <h1>Скриншот сайта {{ domain.name }}</h1>
+
+    <form method="post" enctype="multipart/form-data" class="card" novalidate>
+        <div class="card-body">
+            {% csrf_token %}
+            {% if domain.screenshot %}
+                <img src="{{ domain.screenshot.url }}" alt="Текущий скриншот" class="img-fluid rounded mb-3" style="max-height: 240px">
+            {% endif %}
+            {% for field in form %}
+                <div class="mb-3">
+                    <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                    {{ field }}
+                    <div class="form-text text-muted">{{ field.help_text }}</div>
+                    {% for error in field.errors %}
+                        <div class="text-warning">{{ error }}</div>
+                    {% endfor %}
+                </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+            <a href="{{ domain.get_absolute_url }}" class="btn btn-outline-secondary">Отмена</a>
+        </div>
+    </form>
+{% endblock %}

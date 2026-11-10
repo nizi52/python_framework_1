@@ -13,6 +13,7 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
+from domains.forms import DomainScreenshotForm
 from domains.models import Domain
 from homepage.views import not_found
 from rentals.models import Rental
@@ -83,6 +84,22 @@ def domain_detail_by_id(request, domain_id):
     if domain is None:
         return domain_not_found(request)
     return redirect(domain, permanent=True)
+
+
+def domain_screenshot(request, slug):
+    """Страница /domains/<slug>/screenshot/: загрузка скриншота сайта домена."""
+    domain = Domain.objects.filter(slug=slug).first()
+    if domain is None:
+        return domain_not_found(request)
+    if request.method == "POST":
+        form = DomainScreenshotForm(request.POST, request.FILES, instance=domain)
+        if form.is_valid():
+            form.save()
+            return redirect(domain)
+    else:
+        form = DomainScreenshotForm(instance=domain)
+    context = {"title": f"{domain.name}: скриншот", "domain": domain, "form": form}
+    return render(request, "domains/domain_screenshot.html", context)
 
 
 def parse_date(value):

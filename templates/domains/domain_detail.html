@@ -28,6 +28,14 @@
                 {% endfor %}
             </ul>
 
+            <p class="card-text"><strong>Скриншот сайта:</strong></p>
+            {% if domain.screenshot %}
+                <img src="{{ domain.screenshot.url }}" alt="Скриншот сайта {{ domain.name }}" class="img-fluid rounded mb-2" style="max-height: 360px">
+            {% else %}
+                <p class="text-muted">Скриншот не загружен.</p>
+            {% endif %}
+            <p><a href="{% url 'domains:screenshot' domain.slug %}" class="btn btn-sm btn-outline-light">Загрузить скриншот</a></p>
+
             <p class="card-text"><strong>Аренда ({{ rentals|length }}):</strong></p>
             <ul>
                 {% for rental in rentals %}

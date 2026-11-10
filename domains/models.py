@@ -83,6 +83,12 @@ class Domain(models.Model):
         help_text="Последний оплаченный день. После этой даты домен считается истёкшим.",
     )
     is_removed = models.BooleanField(default=False, verbose_name="Исключён из реестра")
+    screenshot = models.ImageField(
+        upload_to="domains/",
+        blank=True,
+        null=True,
+        verbose_name="Скриншот сайта",
+    )
     is_ru_zone = models.GeneratedField(
         expression=Case(
             When(Q(name__endswith=".ru") | Q(name__endswith=".рф"), then=Value(True)),

@@ -18,6 +18,13 @@
             <p class="card-text"><strong>Статус аренды:</strong> {{ rental.get_status_display }}</p>
             <p class="card-text">На текущую дату: {% include "includes/badge.html" with status=rental.state %}</p>
             <a href="{% url 'rentals:list' %}" class="btn btn-outline-secondary">← к списку аренд</a>
+            <a href="{% url 'rentals:update' rental.id %}" class="btn btn-outline-light">Изменить</a>
+            {% if rental.status == rental.Status.ACTIVE %}
+                <form method="post" action="{% url 'rentals:cancel' rental.id %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger">Отменить аренду</button>
+                </form>
+            {% endif %}
         </div>
     </div>
 {% endblock %}

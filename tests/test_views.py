@@ -167,10 +167,11 @@ def test_rentals_filters(client):
 
 def test_rentals_bad_parameters_do_not_break_page(client):
     url = reverse("rentals:list")
-    response = client.get(url, {"date": "31.12.2026", "domain": "abc", "user": "-1", "sort": "x"})
+    response = client.get(url, {"date": "2026-13-45", "domain": "abc", "user": "-1", "sort": "x"})
     assert response.status_code == 200
-    assert response.context["error"]
-    assert len(response.context["rows"]) == 4  # некорректные фильтры игнорируются
+    # с ПР11 ошибки показывает форма фильтров, некорректные фильтры не применяются
+    assert set(response.context["form"].errors) == {"date", "domain", "user", "sort"}
+    assert len(response.context["rows"]) == 4
 
 
 def test_rentals_sorting(client):
